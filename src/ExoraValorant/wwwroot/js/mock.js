@@ -29,16 +29,16 @@ const MOCK = (() => {
   });
 
   const allies = [
-    player({ name: "RawenCat", tag: "rawr", isMe: true, agent: A.fade, title: "Aimbot", level: 226, rankTier: 21, rr: 47, peakTier: 22, peakAct: "E9 A2", prevTier: 20, wr: 56, games: 48, kd: 1.31, hs: 27, party: 0 }),
-    player({ name: "AleSuw", tag: "Niza", agent: A.sage, title: ":3", level: 0, rankTier: 14, rr: 81, peakTier: 16, peakAct: "E8 A3", prevTier: 13, wr: 51, games: 31, kd: 0.94, hs: 19, party: 0 }),
-    player({ name: "sauveur compulsif", tag: "EUW", agent: A.omen, title: "Aura", level: 0, rankTier: 18, rr: 12, peakTier: 19, prevTier: 17, wr: 49, games: 72, kd: 1.05, hs: 22 }),
-    player({ name: "Omega Lux", tag: "8812", agent: A.killjoy, title: "NPC", level: 0, rankTier: 10, rr: 33, peakTier: 12, prevTier: 9, wr: 44, games: 18, kd: 0.82, hs: 14 }),
-    player({ name: "ScorpiOn", tag: "MAIN", agent: A.raze, title: "Grrr", level: 0, rankTier: 16, rr: 64, peakTier: 17, prevTier: 15, wr: 53, games: 40, kd: 1.12, hs: 21 }),
+    player({ name: "Player", tag: "0001", isMe: true, agent: A.fade, title: "Aimbot", level: 226, rankTier: 21, rr: 47, peakTier: 22, peakAct: "E9 A2", prevTier: 20, wr: 56, games: 48, kd: 1.31, hs: 27, party: 0 }),
+    player({ name: "Player2", tag: "0002", agent: A.sage, title: ":3", level: 0, rankTier: 14, rr: 81, peakTier: 16, peakAct: "E8 A3", prevTier: 13, wr: 51, games: 31, kd: 0.94, hs: 19, party: 0 }),
+    player({ name: "Player3", tag: "0003", agent: A.omen, title: "Aura", level: 0, rankTier: 18, rr: 12, peakTier: 19, prevTier: 17, wr: 49, games: 72, kd: 1.05, hs: 22 }),
+    player({ name: "Player4", tag: "0004", agent: A.killjoy, title: "NPC", level: 0, rankTier: 10, rr: 33, peakTier: 12, prevTier: 9, wr: 44, games: 18, kd: 0.82, hs: 14 }),
+    player({ name: "Player5", tag: "0005", agent: A.raze, title: "Grrr", level: 0, rankTier: 16, rr: 64, peakTier: 17, prevTier: 15, wr: 53, games: 40, kd: 1.12, hs: 21 }),
   ];
   const enemies = [
     player({ name: "Reyna", hidden: true, agent: A.reyna, title: "Aimbot", level: 345, rankTier: 16, rr: 20, peakTier: 18, prevTier: 16, wr: 52, games: 61, kd: 1.22, hs: 25, party: 1 }),
-    player({ name: "rudnez", tag: "9888", agent: A.jett, title: "Green Flag", level: 115, rankTier: 16, rr: 71, peakTier: 17, prevTier: 15, wr: 50, games: 22, kd: 1.01, hs: 20, party: 1 }),
-    player({ name: "Saasil花Lu", tag: "月の花 鬼", agent: A.skye, title: "Wub Wub", level: 274, rankTier: 17, rr: 5, peakTier: 19, prevTier: 17, wr: 47, games: 54, kd: 0.97, hs: 18, party: 2, partyGuess: true }),
+    player({ name: "Player6", tag: "0006", agent: A.jett, title: "Green Flag", level: 115, rankTier: 16, rr: 71, peakTier: 17, prevTier: 15, wr: 50, games: 22, kd: 1.01, hs: 20, party: 1 }),
+    player({ name: "Player7", tag: "0007", agent: A.skye, title: "Wub Wub", level: 274, rankTier: 17, rr: 5, peakTier: 19, prevTier: 17, wr: 47, games: 54, kd: 0.97, hs: 18, party: 2, partyGuess: true }),
     player({ name: "Sova", hidden: true, agent: A.sova, title: "", level: 0, levelHidden: true, rankTier: 18, rr: 90, peakTier: 20, prevTier: 18, wr: 58, games: 88, kd: 1.4, hs: 31 }),
     player({ name: "Viper", hidden: true, agent: A.viper, title: "Aura", level: 475, rankTier: 15, rr: 42, peakTier: 16, prevTier: 14, wr: 45, games: 26, kd: 0.88, hs: 16, party: 2, partyGuess: true }),
   ];
@@ -49,7 +49,7 @@ const MOCK = (() => {
     connection: "ok",
     status: { state: "INGAME", mode: "Swiftplay", queue: "swiftplay", party: { size: 2, max: 5 }, score: { ally: 2, enemy: 1 }, since: Date.now() - 3 * 60e3, agent: A.fade },
     me: {
-      name: "RawenCat", tag: "rawr", title: "Aimbot", level: 226, card: allies[0].card,
+      name: "Player", tag: "0001", title: "Aimbot", level: 226, card: allies[0].card,
       rank: rank(21), rr: 47, peak: { ...rank(22), act: "E9 A2" }, wr: 56, games: 48,
       agent: A.jett,
       recent: [
@@ -62,15 +62,15 @@ const MOCK = (() => {
     },
     match: { map, mode: "Swiftplay", state: "INGAME", score: { ally: 2, enemy: 1 }, allies, enemies, single: false },
     friends: [
-      { puuid: "f1", name:"TRAUMADAS LOVER", tag: "Cul0n", status: "ingame", mode: "Swiftplay", rank: rank(16), card: card("33c1f011-4eca-068c-9751-f68c788b2eee"), avatar: `${media}/playercards/33c1f011-4eca-068c-9751-f68c788b2eee/smallart.png` },
-      { puuid: "f2", name:"TP Jayko シ", tag: "bot", status: "ingame", mode: "Competitive", rank: rank(19), card: card("bb6ae873-43ec-efb4-3ea6-93ac00a82d4e") },
-      { puuid: "f3", name:"noteminimal66", tag: "2134q", status: "pregame", mode: "Swiftplay", rank: rank(9), card: card("7fdbe3ef-4fd8-a5a6-0ab2-0ab06da7caa9") },
-      { puuid: "f4", name:"cosmo", tag: "김채원", status: "ingame", mode: "", rank: rank(21), card: card("30b64514-440d-1261-f863-6bbb180263f9") },
-      { puuid: "f5", name:"Koke GS", tag: "KOKE", status: "menus", mode: "Competitive", rank: rank(19), card: card("bb6ae873-43ec-efb4-3ea6-93ac00a82d4e") },
-      { puuid: "f6", name:"AleSuw", tag: "Niza", status: "ingame", mode: "Swiftplay", rank: rank(0), card: card("9fb348bc-41a0-91ad-8a3e-818035c4e561") },
-      { puuid: "f7", name:"yepa2836", tag: "LAN", status: "menus", mode: "Competitive", rank: rank(21), card: card("33c1f011-4eca-068c-9751-f68c788b2eee") },
-      { puuid: "f8", name:"midnight", tag: "0001", status: "offline", mode: "", rank: rank(12), card: null },
-      { puuid: "f9", name:"kuro", tag: "neko", status: "offline", mode: "", rank: null, card: null },
+      { puuid: "f1", name: "Player8", tag: "0008", status: "ingame", mode: "Swiftplay", rank: rank(16), card: card("33c1f011-4eca-068c-9751-f68c788b2eee"), avatar: `${media}/playercards/33c1f011-4eca-068c-9751-f68c788b2eee/smallart.png` },
+      { puuid: "f2", name: "Player9", tag: "0009", status: "ingame", mode: "Competitive", rank: rank(19), card: card("bb6ae873-43ec-efb4-3ea6-93ac00a82d4e") },
+      { puuid: "f3", name: "Player10", tag: "0010", status: "pregame", mode: "Swiftplay", rank: rank(9), card: card("7fdbe3ef-4fd8-a5a6-0ab2-0ab06da7caa9") },
+      { puuid: "f4", name: "Player11", tag: "0011", status: "ingame", mode: "", rank: rank(21), card: card("30b64514-440d-1261-f863-6bbb180263f9") },
+      { puuid: "f5", name: "Player12", tag: "0012", status: "menus", mode: "Competitive", rank: rank(19), card: card("bb6ae873-43ec-efb4-3ea6-93ac00a82d4e") },
+      { puuid: "f6", name: "Player2", tag: "0002", status: "ingame", mode: "Swiftplay", rank: rank(0), card: card("9fb348bc-41a0-91ad-8a3e-818035c4e561") },
+      { puuid: "f7", name: "Player13", tag: "0013", status: "menus", mode: "Competitive", rank: rank(21), card: card("33c1f011-4eca-068c-9751-f68c788b2eee") },
+      { puuid: "f8", name: "Player14", tag: "0014", status: "offline", mode: "", rank: rank(12), card: null },
+      { puuid: "f9", name: "Player15", tag: "0015", status: "offline", mode: "", rank: null, card: null },
     ],
     discord: { connected: true },
     valorantRunning: true,
@@ -104,7 +104,7 @@ const MOCK = (() => {
   const profile = (puuid) => {
     const f = state.friends.find((x) => x.puuid === puuid) || state.friends[0];
     return { ...state.me, name: f.name, tag: f.tag, title: "", card: f.card, rank: f.rank || rank(0), level: 0,
-      recent: state.me.recent.map((r, i) => ({ ...r, id: r.id + puuid, result: i % 2 ? "W" : "L" })) };
+      recent: state.me.recent.map((r) => ({ ...r, id: r.id + puuid })) };
   };
 
   return { state, news, history, profile };

@@ -65,6 +65,11 @@ When a match is found, Exora switches from Home to this page by itself.
 - **Open a friend** to see their rank, peak, win rate and last matches, and open those matches from their side.
 - Search by name.
 
+<p align="center">
+  <img src="docs/screenshots/en/history.jpg" width="49%" alt="A finished match with a player opened">
+  <img src="docs/screenshots/en/profile.jpg" width="49%" alt="A friend's profile">
+</p>
+
 ### 🎮 Discord RPC
 | Setting | Options |
 |---|---|
