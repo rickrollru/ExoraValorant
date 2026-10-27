@@ -81,7 +81,7 @@ svg { flex-shrink: 0; }
 .drag button, .drag input, .drag select { -webkit-app-region: no-drag; }
 
 .sidebar { width: var(--sidebar-w); flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; padding: 18px 14px 14px;
-  background: var(--panel); border-right: 1px solid var(--border); backdrop-filter: blur(18px); }
+  background: var(--panel); border-right: 1px solid var(--border); }
 
 .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; border-bottom: 1px solid var(--border); }
 .logo { width: 30px; height: 30px; fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 92; }
@@ -144,7 +144,7 @@ svg { flex-shrink: 0; }
 .page-head .spacer { flex: 1; }
 
 /* ---------- Generic building blocks ---------- */
-.card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; backdrop-filter: blur(16px);
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px;
   transition: background var(--t-hover) var(--ease), box-shadow var(--t-hover) var(--ease); }
 .card.hoverable:hover { background: var(--card-hover); box-shadow: 0 6px 20px var(--shadow); }
 .card-head { display: flex; align-items: center; gap: 10px; }
@@ -216,10 +216,12 @@ svg { flex-shrink: 0; }
 .select-btn .chev { margin-left: auto; width: 16px; height: 16px; color: var(--text-muted); transition: transform var(--t-ctrl) var(--ease); }
 .select.open .chev { transform: rotate(180deg); }
 .select-menu { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 6px); padding: 4px; border-radius: 10px; background: var(--panel);
-  border: 1px solid var(--border); backdrop-filter: blur(20px); box-shadow: 0 12px 32px var(--shadow);
+  border: 1px solid var(--border); box-shadow: 0 12px 32px var(--shadow);
   opacity: 0; transform: translateY(-4px) scale(.98); pointer-events: none; transition: opacity var(--t-ctrl), transform var(--t-ctrl) var(--ease); }
 :root[data-theme="dark"] .select-menu { background: rgba(24, 27, 33, .97); }
 .select.open .select-menu { opacity: 1; transform: none; pointer-events: auto; }
+/* An open list must float above the cards that come after its own card. */
+.card:has(.select.open) { position: relative; z-index: 30; }
 .select-opt { display: flex; align-items: center; gap: 10px; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 6px; background: none; color: var(--text-2);
   font-weight: 600; cursor: pointer; text-align: left; }
 .select-opt:hover { background: var(--track); color: var(--text); }
@@ -288,7 +290,7 @@ svg { flex-shrink: 0; }
 .hero-id .name .tag { color: var(--text-muted); font-weight: 700; }
 .hero-id .ptitle { font-size: 12px; font-weight: 700; color: var(--accent); margin-top: 2px; }
 .agent-chip { display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 999px; background: color-mix(in srgb, var(--bg) 70%, transparent);
-  border: 1px solid var(--border); backdrop-filter: blur(10px); }
+  border: 1px solid var(--border); }
 .agent-chip .avatar { width: 30px; height: 30px; }
 .agent-chip small { display: block; font-size: 10px; font-weight: 600; color: var(--text-muted); }
 .agent-chip b { font-size: 13px; }
@@ -369,18 +371,24 @@ svg { flex-shrink: 0; }
 .player .ptitle { font-size: 11px; font-weight: 700; color: var(--accent); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .team.enemy .player .ptitle { color: var(--enemy); }
 .player .right { display: flex; align-items: center; gap: 10px; }
-.player .rr { font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: right; line-height: 1.25; min-width: 54px; }
-.player .rr b { display: block; color: var(--text); font-size: 12px; }
+.player .rr { font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: right; line-height: 1.25; min-width: 0; white-space: nowrap; }
+.player .rr b { display: block; color: var(--text); font-size: 12px; overflow: hidden; }
+.player .right { min-width: 0; }
 /* Expands to its real height (grid 0fr -> 1fr), so the motion has no dead time like a max-height hack. */
 .player-extra { position: relative; display: grid; grid-template-rows: 0fr; opacity: 0;
   transition: grid-template-rows calc(280ms * var(--anim)) var(--ease), opacity calc(220ms * var(--anim)) var(--ease); }
 .player.open .player-extra { grid-template-rows: 1fr; opacity: 1; }
-.player-extra-in { min-height: 0; overflow: hidden; display: grid; grid-template-columns: 1.6fr 1.6fr 1fr .8fr .8fr; gap: 6px; padding: 0 12px;
+/* Two rows: peak and last act (halves) with room for rank names, then win rate, K/D and HS% (thirds). */
+.player-extra-in { min-height: 0; overflow: hidden; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; padding: 0 12px;
   transition: padding calc(280ms * var(--anim)) var(--ease); }
 .player.open .player-extra-in { padding-bottom: 12px; }
-.player-extra .stat { background: color-mix(in srgb, var(--bg) 45%, transparent); padding: 8px 10px; }
+.player-extra .stat { grid-column: span 2; min-width: 0; background: color-mix(in srgb, var(--bg) 45%, transparent); padding: 8px 10px; }
+.player-extra .stat.wide { grid-column: span 3; }
 .player-extra .stat b { font-size: 13px; display: flex; align-items: center; gap: 6px; min-width: 0; }
-.player-extra .stat b > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-extra .stat b > span { min-width: 0; overflow: hidden; white-space: nowrap; }
+.player-extra .stat small, .player-extra .stat .sub { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* A rank name that doesn't fit is hidden rather than cut; the icon and the tooltip stay (see fitNames in ui.js). */
+.fit-name.too-long { visibility: hidden; width: 0; }
 .player-extra .stat .rank-img { width: 20px; height: 20px; }
 
 /* ---------- Friends ---------- */
@@ -440,7 +448,7 @@ svg { flex-shrink: 0; }
 /* ---------- Toasts ---------- */
 .toasts { position: fixed; right: 18px; bottom: 18px; z-index: 50; display: flex; flex-direction: column; gap: 8px; }
 .toast { position: relative; width: 300px; padding: 12px 14px 14px 18px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border);
-  backdrop-filter: blur(20px); box-shadow: 0 12px 30px var(--shadow); overflow: hidden; animation: toast-in var(--t-win) var(--ease) both; }
+  box-shadow: 0 12px 30px var(--shadow); overflow: hidden; animation: toast-in var(--t-win) var(--ease) both; }
 :root[data-theme="dark"] .toast { background: rgba(24, 27, 33, .96); }
 .toast::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); }
 .toast.error::before { background: var(--loss); }

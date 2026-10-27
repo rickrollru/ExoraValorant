@@ -25,6 +25,7 @@ public sealed class MainForm : Form
     private string _iconAccent = "";
     private string _newsLang = "";
     private bool _ready;
+    private string _lastStateJson = "";
 
     public MainForm()
     {
@@ -54,6 +55,7 @@ public sealed class MainForm : Form
         {
             ApplyFrame();
             PostWindowState();
+            ApplyBackgroundMode();
         };
     }
 
@@ -81,7 +83,9 @@ public sealed class MainForm : Form
     {
         try
         {
-            var env = await CoreWebView2Environment.CreateAsync(null, AppInfo.WebViewDir);
+            // Software rendering keeps the app off the GPU entirely, for PCs where the game stutters next to it.
+            var options = new CoreWebView2EnvironmentOptions(_settings.HardwareAcceleration ? null : "--disable-gpu --disable-gpu-compositing");
+            var env = await CoreWebView2Environment.CreateAsync(null, AppInfo.WebViewDir, options);
             await _web.EnsureCoreWebView2Async(env);
         }
         catch (WebView2RuntimeNotFoundException)
@@ -173,6 +177,7 @@ public sealed class MainForm : Form
                 Post("settings", _settings);
                 ApplyZoom();
                 PostWindowState();
+                _lastStateJson = "";
                 Post("state", _watcher.Current);
                 _watcher.Start();
                 _ = LoadNewsAsync();
@@ -188,6 +193,9 @@ public sealed class MainForm : Form
                 break;
             case "openUrl":
                 OpenUrl(msg["url"]?.GetValue<string>());
+                break;
+            case "playerStats":
+                _watcher.RequestPlayerStats(msg["puuid"]?.GetValue<string>() ?? "");
                 break;
             case "openData":
                 Process.Start(new ProcessStartInfo("explorer.exe", $"\"{AppInfo.DataDir}\"") { UseShellExecute = true });
@@ -277,7 +285,11 @@ public sealed class MainForm : Form
         if (IsDisposed) return;
         BeginInvoke(() =>
         {
-            if (_ready) Post("state", state);
+            // Most polls change nothing; skipping identical states saves the page a re-render every few seconds.
+            var json = JsonSerializer.Serialize(new { type = "state", data = state }, AppInfo.Json);
+            if (json == _lastStateJson) return;
+            _lastStateJson = json;
+            if (_ready) _web.CoreWebView2?.PostWebMessageAsJson(json);
             _discord.Update(state, _settings, _watcher.Content);
         });
     }
@@ -296,6 +308,17 @@ public sealed class MainForm : Form
         if (_web.CoreWebView2 == null) return;
         var json = JsonSerializer.Serialize(new { type, data }, AppInfo.Json);
         _web.CoreWebView2.PostWebMessageAsJson(json);
+    }
+
+    // While minimised the page is hidden and WebView2 is asked to drop memory; it gets both back on restore.
+    private void ApplyBackgroundMode()
+    {
+        var core = _web.CoreWebView2;
+        if (core == null) return;
+        var minimized = WindowState == FormWindowState.Minimized;
+        if (_web.Visible == !minimized) return;
+        _web.Visible = !minimized;
+        core.MemoryUsageTargetLevel = minimized ? CoreWebView2MemoryUsageTargetLevel.Low : CoreWebView2MemoryUsageTargetLevel.Normal;
     }
 
     private void PostWindowState()

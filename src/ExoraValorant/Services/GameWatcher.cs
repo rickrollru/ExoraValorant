@@ -12,6 +12,7 @@ public sealed class GameWatcher : IDisposable
     private static readonly TimeSpan FriendsTtl = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan ProfileTtl = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan MineGrace = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan MyPartyTtl = TimeSpan.FromSeconds(30);
 
     private readonly Func<AppSettings> _settings;
     private readonly RiotClient _riot = new();
@@ -24,6 +25,8 @@ public sealed class GameWatcher : IDisposable
     private Task? _loop;
     private Task? _enrich;
     private Task? _friendRanks;
+    private readonly ConcurrentDictionary<string, MatchSummary> _recentCache = new();
+    private readonly ConcurrentDictionary<string, bool> _statsRequested = new();
     private readonly FriendCards _friendCards = new();
     private string _contentLang = "";
 
@@ -39,6 +42,9 @@ public sealed class GameWatcher : IDisposable
     private Presence? _lastMine;
     private DateTime _lastMineAt;
     private bool _mineMissingLogged;
+    private string? _myPartyId;
+    private HashSet<string> _myParty = [];
+    private DateTime _myPartyAt;
 
     public event Action<UiState>? StateChanged;
     public UiState Current { get; private set; } = new() { Connection = "connecting" };
@@ -76,7 +82,8 @@ public sealed class GameWatcher : IDisposable
             {
                 if (_riot.IsConnected) Log.Info("Lost Riot client: " + ex.Message);
                 ResetSession();
-                Publish(new UiState { Connection = RiotClient.IsValorantRunning() ? "connecting" : "none", ValorantRunning = RiotClient.IsValorantRunning() });
+                var running = RiotClient.IsValorantRunning();
+                Publish(new UiState { Connection = running ? "connecting" : "none", ValorantRunning = running });
             }
             catch (Exception ex)
             {
@@ -107,6 +114,9 @@ public sealed class GameWatcher : IDisposable
         _friendsAt = default;
         MyPresence = null;
         _lastMine = null;
+        _myPartyId = null;
+        _myParty = [];
+        _myPartyAt = default;
     }
 
     private async Task TickAsync(CancellationToken ct)
@@ -167,6 +177,7 @@ public sealed class GameWatcher : IDisposable
                 _coreMatch = null;
             }
             if (loopState == "MENUS") _matchId = null;
+            _myPartyAt = default;
             _lastLoopState = loopState;
         }
 
@@ -189,6 +200,7 @@ public sealed class GameWatcher : IDisposable
 
         MatchDto? match = null;
         var isRange = mine?.MatchMap?.Contains("Range", StringComparison.OrdinalIgnoreCase) == true;
+        if (loopState is "PREGAME" or "INGAME" && DateTime.UtcNow - _myPartyAt > MyPartyTtl) await RefreshMyPartyAsync(ct);
         if (!isRange && loopState == "PREGAME") match = await BuildPregameAsync(mine!, presences, ct);
         else if (!isRange && loopState == "INGAME") match = await BuildCoregameAsync(mine!, presences, ct);
 
@@ -275,39 +287,55 @@ public sealed class GameWatcher : IDisposable
         {
             var id = h?["MatchID"]?.GetValue<string>();
             if (id == null) continue;
-            var details = await _stats.GetMatchDetailsAsync(id, ct);
-            if (details == null) continue;
+            if (!_recentCache.TryGetValue(id, out var summary))
+            {
+                var details = await _stats.GetMatchDetailsAsync(id, ct);
+                if (details == null) continue;
+                summary = SummarizeMatch(details, puuid);
+                if (summary == null) continue;
+                _recentCache[id] = summary;
+            }
 
-            var me = details["players"]?.AsArray().FirstOrDefault(p => p?["subject"]?.GetValue<string>() == puuid);
-            if (me == null) continue;
-            var teamId = me["teamId"]?.GetValue<string>();
-            var teams = details["teams"]?.AsArray() ?? [];
-            var myTeam = teams.FirstOrDefault(t => t?["teamId"]?.GetValue<string>() == teamId);
-            var other = teams.FirstOrDefault(t => t?["teamId"]?.GetValue<string>() != teamId);
-            var won = myTeam?["won"]?.GetValue<bool>() == true;
-            // Deathmatch and similar modes have a "team" per player: no round score, no draws.
-            var twoTeams = teams.Count == 2;
-            var draw = twoTeams && myTeam != null && other != null && !won && other["won"]?.GetValue<bool>() != true;
-
-            var info = details["matchInfo"];
-            var agent = _content.Agent(me["characterId"]?.GetValue<string>());
+            var agent = _content.Agent(summary.AgentId);
             var agentDto = agent == null ? null : new AgentDto(agent.Name, agent.Icon);
             lastAgent ??= agentDto;
-            var stats = me["stats"];
-            // Free-for-all modes: placement by kills instead of a round score.
-            var score = twoTeams && myTeam != null && other != null
-                ? $"{PlayerStats.Int(myTeam, "roundsWon")}–{PlayerStats.Int(other, "roundsWon")}"
-                : $"#{Placement(details, puuid)}";
-
-            list.Add(new RecentDto(
-                draw ? "D" : won ? "W" : "L",
-                agentDto,
-                _content.MapByUrl(info?["mapId"]?.GetValue<string>())?.Name ?? "",
-                _content.QueueName(info?["queueID"]?.GetValue<string>(), info?["provisioningFlowID"]?.GetValue<string>() == "CustomGame"),
-                score,
-                $"{PlayerStats.Int(stats, "kills")}/{PlayerStats.Int(stats, "deaths")}/{PlayerStats.Int(stats, "assists")}"));
+            list.Add(new RecentDto(summary.Result, agentDto, _content.MapByUrl(summary.MapId)?.Name ?? "",
+                _content.QueueName(summary.QueueId, summary.Custom), summary.Score, summary.Kda));
         }
         return (list, lastAgent);
+    }
+
+    // The few fields of a finished match that the home page shows; the full match JSON is dropped right away.
+    private sealed record MatchSummary(string Result, string? AgentId, string? MapId, string? QueueId, bool Custom, string Score, string Kda);
+
+    private static MatchSummary? SummarizeMatch(JsonNode details, string puuid)
+    {
+        var me = details["players"]?.AsArray().FirstOrDefault(p => p?["subject"]?.GetValue<string>() == puuid);
+        if (me == null) return null;
+        var teamId = me["teamId"]?.GetValue<string>();
+        var teams = details["teams"]?.AsArray() ?? [];
+        var myTeam = teams.FirstOrDefault(t => t?["teamId"]?.GetValue<string>() == teamId);
+        var other = teams.FirstOrDefault(t => t?["teamId"]?.GetValue<string>() != teamId);
+        var won = myTeam?["won"]?.GetValue<bool>() == true;
+        // Deathmatch and similar modes have a "team" per player: no round score, no draws.
+        var twoTeams = teams.Count == 2;
+        var draw = twoTeams && myTeam != null && other != null && !won && other["won"]?.GetValue<bool>() != true;
+
+        var info = details["matchInfo"];
+        var stats = me["stats"];
+        // Free-for-all modes: placement by kills instead of a round score.
+        var score = twoTeams && myTeam != null && other != null
+            ? $"{PlayerStats.Int(myTeam, "roundsWon")}–{PlayerStats.Int(other, "roundsWon")}"
+            : $"#{Placement(details, puuid)}";
+
+        return new MatchSummary(
+            draw ? "D" : won ? "W" : "L",
+            me["characterId"]?.GetValue<string>(),
+            info?["mapId"]?.GetValue<string>(),
+            info?["queueID"]?.GetValue<string>(),
+            info?["provisioningFlowID"]?.GetValue<string>() == "CustomGame",
+            score,
+            $"{PlayerStats.Int(stats, "kills")}/{PlayerStats.Int(stats, "deaths")}/{PlayerStats.Int(stats, "assists")}");
     }
 
     private static int Placement(JsonNode details, string puuid)
@@ -318,6 +346,29 @@ public sealed class GameWatcher : IDisposable
     }
 
     // ---------- Match ----------
+
+    // Members of our own party from the party service; works even when they are not friends.
+    private async Task RefreshMyPartyAsync(CancellationToken ct)
+    {
+        _myPartyAt = DateTime.UtcNow;
+        var player = await _riot.GlzGetAsync($"/parties/v1/players/{_riot.Puuid}", ct);
+        var partyId = player?["CurrentPartyID"]?.GetValue<string>();
+        if (partyId == null)
+        {
+            _myPartyId = null;
+            _myParty = [];
+            return;
+        }
+        var party = await _riot.GlzGetAsync($"/parties/v1/parties/{partyId}", ct);
+        var members = party?["Members"]?.AsArray()
+            .Select(m => m?["Subject"]?.GetValue<string>())
+            .Where(s => !string.IsNullOrEmpty(s))
+            .Select(s => s!)
+            .ToHashSet() ?? [];
+        _myPartyId = partyId;
+        _myParty = members;
+        if (members.Count > 1) Log.Info($"Own party: {members.Count} players");
+    }
 
     private async Task<MatchDto?> BuildPregameAsync(Presence mine, List<Presence> presences, CancellationToken ct)
     {
@@ -393,8 +444,13 @@ public sealed class GameWatcher : IDisposable
         StartEnrichment(puuids);
 
         // Parties: players sharing a party id, counted only when two or more of them are in this match.
+        // Chat presence only covers friends, so our own party comes from the party service instead.
         var partyOf = presences.Where(p => puuids.Contains(p.Puuid) && p.IsValorant && p.PartyId != null)
-            .ToDictionary(p => p.Puuid, p => p.PartyId!);
+            .GroupBy(p => p.Puuid)
+            .ToDictionary(g => g.Key, g => g.First().PartyId!);
+        if (_myPartyId != null)
+            foreach (var member in _myParty.Where(puuids.Contains))
+                partyOf[member] = _myPartyId;
         var partyIndex = partyOf.Values.GroupBy(v => v).Where(g => g.Count() > 1).Select(g => g.Key)
             .Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
 
@@ -404,7 +460,7 @@ public sealed class GameWatcher : IDisposable
             var puuid = p["Subject"]?.GetValue<string>() ?? "";
             var identity = p["PlayerIdentity"];
             var isMe = puuid == _riot.Puuid;
-            var sameParty = partyOf.TryGetValue(puuid, out var pid) && pid == mine.PartyId;
+            var sameParty = _myParty.Contains(puuid) || (partyOf.TryGetValue(puuid, out var pid) && pid == mine.PartyId);
             var (agentId, locked) = agentOf(p);
             var agent = _content.Agent(agentId);
             var rank = _stats.CachedRank(puuid);
@@ -441,13 +497,14 @@ public sealed class GameWatcher : IDisposable
         return result;
     }
 
-    // Loads ranks and then combat stats for the match players in the background, one request at a time,
-    // so the table shows up immediately and fills in without hitting rate limits.
+    // Loads ranks of the match players in the background, one small request at a time, so the table shows up
+    // immediately and fills in without hitting rate limits. K/D and HS% need a full match download each, so
+    // they are loaded only for players whose row is opened (RequestPlayerStats).
     private void StartEnrichment(List<string> puuids)
     {
         if (_enrich is { IsCompleted: false }) return;
         var missingRank = puuids.Where(p => _stats.CachedRank(p) == null).ToList();
-        var missingCombat = puuids.Where(p => _stats.CachedCombat(p) == null).ToList();
+        var missingCombat = puuids.Where(p => _statsRequested.ContainsKey(p) && _stats.CachedCombat(p) == null).ToList();
         if (missingRank.Count == 0 && missingCombat.Count == 0) return;
 
         var ct = _cts.Token;
@@ -470,6 +527,25 @@ public sealed class GameWatcher : IDisposable
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 Log.Warn("Enrichment stopped: " + ex.Message);
+            }
+        }, ct);
+    }
+
+    public void RequestPlayerStats(string puuid)
+    {
+        if (string.IsNullOrEmpty(puuid) || !_statsRequested.TryAdd(puuid, true)) return;
+        if (_stats.CachedCombat(puuid) != null) return;
+        var ct = _cts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _stats.GetCombatAsync(puuid, ct);
+                Wake();
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Log.Warn("Player stats failed: " + ex.Message);
             }
         }, ct);
     }

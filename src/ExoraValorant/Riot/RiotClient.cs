@@ -48,8 +48,12 @@ public sealed class RiotClient : IDisposable
         _remote.DefaultRequestHeaders.UserAgent.ParseAdd("ShooterGame/13 Windows/10.0.19043.1.256.64bit");
     }
 
-    public static bool IsValorantRunning() =>
-        System.Diagnostics.Process.GetProcessesByName("VALORANT-Win64-Shipping").Length > 0;
+    public static bool IsValorantRunning()
+    {
+        var processes = System.Diagnostics.Process.GetProcessesByName("VALORANT-Win64-Shipping");
+        foreach (var p in processes) p.Dispose();
+        return processes.Length > 0;
+    }
 
     public static bool IsRiotClientRunning() => File.Exists(LockfilePath);
 

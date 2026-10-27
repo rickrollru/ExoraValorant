@@ -151,8 +151,8 @@ function playerRow(p, parties, settings) {
     ? `<span class="badge warn">${t("match.levelHidden")}</span>`
     : `<span class="badge num">${t("match.level", { n: p.level })}</span>`;
   const rr = p.rank && p.rank.tier > 2
-    ? `<div class="rr"><b>${esc(p.rank.name)}</b>${p.leaderboard ? t("match.lb", { n: p.leaderboard }) : t("match.rr", { n: p.rr ?? 0 })}</div>`
-    : `<div class="rr"><b>${esc(p.rank ? p.rank.name : "—")}</b>&nbsp;</div>`;
+    ? `<div class="rr" title="${esc(p.rank.name)}"><b class="fit-name">${esc(p.rank.name)}</b>${p.leaderboard ? t("match.lb", { n: p.leaderboard }) : t("match.rr", { n: p.rr ?? 0 })}</div>`
+    : `<div class="rr" title="${esc(p.rank ? p.rank.name : "")}"><b class="fit-name">${esc(p.rank ? p.rank.name : "—")}</b>&nbsp;</div>`;
   const pct = (v) => (v == null ? "—" : v + "%");
 
   return `<div class="player${p.isMe ? " me" : ""}" data-player="${esc(p.puuid)}">
@@ -167,8 +167,8 @@ function playerRow(p, parties, settings) {
       <div class="right">${level}${rr}${rankImg(p.rank)}</div>
     </div>
     <div class="player-extra"><div class="player-extra-in">
-      <div class="stat"><small>${t("match.peak")}</small><b>${rankImg(p.peak)}<span title="${esc(p.peak ? p.peak.name : "")}">${esc(p.peak ? p.peak.name : "—")}</span></b><span class="sub">${esc(p.peak && p.peak.act || "")}</span></div>
-      <div class="stat"><small>${t("match.prev")}</small><b>${rankImg(p.prev)}<span title="${esc(p.prev ? p.prev.name : "")}">${esc(p.prev ? p.prev.name : "—")}</span></b></div>
+      <div class="stat wide"><small>${t("match.peak")}</small><b>${rankImg(p.peak)}<span class="fit-name" title="${esc(p.peak ? p.peak.name : "")}">${esc(p.peak ? p.peak.name : "—")}</span></b><span class="sub">${esc(p.peak && p.peak.act || "")}</span></div>
+      <div class="stat wide"><small>${t("match.prev")}</small><b>${rankImg(p.prev)}<span class="fit-name" title="${esc(p.prev ? p.prev.name : "")}">${esc(p.prev ? p.prev.name : "—")}</span></b></div>
       <div class="stat"><small>${t("match.wr")}</small><b class="num">${pct(p.wr)}</b><span class="sub">${t("home.games", { n: p.games ?? 0 })}</span></div>
       <div class="stat"><small>${t("match.kd")}</small><b class="num">${p.kd ?? "—"}</b></div>
       <div class="stat"><small>${t("match.hs")}</small><b class="num">${pct(p.hs)}</b></div>
@@ -364,6 +364,7 @@ function renderSettings(state, settings) {
           <div class="sep"></div>
           <div class="row"><div class="label">${t("settings.lang")}</div>${seg("lang", s.lang, [["ru", "Русский"], ["en", "English"]])}</div>
           <div class="row"><div class="label">${t("settings.streamer")}<small>${t("settings.streamerDesc")}</small></div>${toggle("streamerMode", s.streamerMode)}</div>
+          <div class="row"><div class="label">${t("settings.gpu")}<small>${t("settings.gpuDesc")}</small></div>${toggle("hardwareAcceleration", s.hardwareAcceleration)}</div>
           <div class="row"><div class="label">${t("settings.refresh")}</div>${seg("refreshSec", s.refreshSec, [[2, t("sec", { n: 2 })], [3, t("sec", { n: 3 })], [5, t("sec", { n: 5 })]])}</div>
         </div>
         <div class="card">

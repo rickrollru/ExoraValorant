@@ -2,7 +2,7 @@
 
 const DEFAULT_SETTINGS = {
   lang: "ru", theme: "dark", accent: "#4F8CFF", tint: 0, font: "Manrope", scale: 1, anim: "full",
-  streamerMode: false, refreshSec: 3,
+  streamerMode: false, refreshSec: 3, hardwareAcceleration: true,
   rpc: {
     enabled: true, clientId: "",
     game: { large: "map", small: "agent" },
@@ -109,6 +109,7 @@ function renderPage(animate = true) {
   });
   document.getElementById("titlebar-title").textContent = page.id === "home" ? "" : navLabel(page.id);
   layoutSegs($content);
+  fitNames($content);
 }
 
 function renderAll(animate) {
@@ -201,7 +202,13 @@ document.addEventListener("click", (e) => {
   if (player) {
     const id = player.dataset.player;
     player.classList.toggle("open");
-    if (player.classList.contains("open")) UI.openPlayers.add(id); else UI.openPlayers.delete(id);
+    if (player.classList.contains("open")) {
+      UI.openPlayers.add(id);
+      // K/D and HS% are heavy to load, so the host fetches them only for opened rows.
+      send("playerStats", { puuid: id });
+    } else {
+      UI.openPlayers.delete(id);
+    }
     return;
   }
 
@@ -289,6 +296,7 @@ document.addEventListener("mousedown", (e) => {
 
 window.addEventListener("resize", () => {
   layoutSegs($content);
+  fitNames($content);
   layoutNav();
 });
 
@@ -364,4 +372,6 @@ if (host) {
 
 applySettings();
 renderAll(true);
+// Text widths change once the web fonts arrive.
+document.fonts.ready.then(() => fitNames($content));
 send("ready", {});

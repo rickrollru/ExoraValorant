@@ -147,6 +147,14 @@ function layoutSegs(root) {
   });
 }
 
+// Shows a rank name only when it fits whole; otherwise only the icon (and the tooltip) remain.
+function fitNames(root) {
+  const els = root.querySelectorAll(".fit-name");
+  els.forEach((el) => el.classList.remove("too-long"));
+  const over = Array.from(els).filter((el) => el.scrollWidth > el.clientWidth + 1);
+  over.forEach((el) => el.classList.add("too-long"));
+}
+
 // Moves a sliding pill; the very first placement happens without a transition so it doesn't fly in from 0.
 function placePill(pill, props) {
   const first = !pill.dataset.placed;

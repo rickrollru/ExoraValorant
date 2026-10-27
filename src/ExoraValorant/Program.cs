@@ -25,6 +25,16 @@ internal static class Program
             e.SetObserved();
         };
 
+        // The game always comes first: the tracker never competes with it for CPU time.
+        try
+        {
+            using var self = System.Diagnostics.Process.GetCurrentProcess();
+            self.PriorityClass = System.Diagnostics.ProcessPriorityClass.BelowNormal;
+        }
+        catch
+        {
+        }
+
         ApplicationConfiguration.Initialize();
         Application.Run(new MainForm());
     }

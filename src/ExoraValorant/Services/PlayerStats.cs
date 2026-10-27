@@ -15,7 +15,6 @@ public sealed class PlayerStats(RiotClient riot, GameContent content)
 
     private readonly ConcurrentDictionary<string, (DateTime At, RankInfo Info)> _ranks = new();
     private readonly ConcurrentDictionary<string, CombatStats> _combat = new();
-    private readonly ConcurrentDictionary<string, JsonNode?> _matchDetails = new();
 
     public void Clear()
     {
@@ -89,7 +88,8 @@ public sealed class PlayerStats(RiotClient riot, GameContent content)
         return new RankInfo(tier, rr, lb, peak, content.ActLabel(peakSeason), prevTier, wr, games);
     }
 
-    // K/D and headshot % from the player's latest competitive match.
+    // K/D and headshot % from the player's latest competitive match. Costly (a full match download),
+    // so it is only loaded when the player's row is opened.
     public async Task<CombatStats> GetCombatAsync(string puuid, CancellationToken ct)
     {
         if (_combat.TryGetValue(puuid, out var cached)) return cached;
@@ -106,13 +106,10 @@ public sealed class PlayerStats(RiotClient riot, GameContent content)
         return stats;
     }
 
-    public async Task<JsonNode?> GetMatchDetailsAsync(string matchId, CancellationToken ct)
-    {
-        if (_matchDetails.TryGetValue(matchId, out var cached)) return cached;
-        var details = await riot.PdGetAsync($"/match-details/v1/matches/{matchId}", ct);
-        if (details != null) _matchDetails[matchId] = details;
-        return details;
-    }
+    // A full match is 1-3 MB of JSON. It is never cached: callers keep only the few numbers they need,
+    // otherwise memory grows by tens of megabytes with every match played.
+    public Task<JsonNode?> GetMatchDetailsAsync(string matchId, CancellationToken ct) =>
+        riot.PdGetAsync($"/match-details/v1/matches/{matchId}", ct);
 
     private static CombatStats ComputeCombat(JsonNode match, string puuid)
     {

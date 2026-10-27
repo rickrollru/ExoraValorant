@@ -14,6 +14,7 @@ public sealed class AppSettings
     public string Anim { get; set; } = "full";
     public bool StreamerMode { get; set; }
     public int RefreshSec { get; set; } = 3;
+    public bool HardwareAcceleration { get; set; } = true;
     public RpcSettings Rpc { get; set; } = new();
 
     public static AppSettings Load()
