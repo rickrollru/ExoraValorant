@@ -23,6 +23,8 @@ public sealed class GameWatcher : IDisposable
 
     private Task? _loop;
     private Task? _enrich;
+    private Task? _friendRanks;
+    private readonly FriendCards _friendCards = new();
     private string _contentLang = "";
 
     private string? _lastLoopState;
@@ -487,6 +489,7 @@ public sealed class GameWatcher : IDisposable
 
         var byPuuid = presences.Where(p => p.IsValorant).GroupBy(p => p.Puuid).ToDictionary(g => g.Key, g => g.First());
         var list = new List<FriendDto>();
+        var withoutRank = new List<string>();
         foreach (var f in _friendsList)
         {
             var puuid = f?["puuid"]?.GetValue<string>();
@@ -495,20 +498,50 @@ public sealed class GameWatcher : IDisposable
             var tag = f["game_tag"]?.GetValue<string>() ?? "";
             if (name == "") continue;
 
-            if (byPuuid.TryGetValue(puuid, out var p))
-            {
-                var status = p.SessionLoopState switch { "INGAME" => "ingame", "PREGAME" => "pregame", _ => "menus" };
-                list.Add(new FriendDto(name, tag, status, _content.QueueName(p.QueueId, p.IsCustomGame), Rank(p.CompetitiveTier),
-                    GameContent.CardWide(p.PlayerCardId)));
-            }
-            else
-            {
-                list.Add(new FriendDto(name, tag, "offline", "", null, null));
-            }
+            // Presence only exists while a friend is online; otherwise fall back to the rank loaded from MMR
+            // and the player card remembered from the last time we saw them online.
+            var online = byPuuid.TryGetValue(puuid, out var p);
+            if (online && !string.IsNullOrEmpty(p!.PlayerCardId)) _friendCards.Remember(puuid, p.PlayerCardId);
+            var cardId = online && !string.IsNullOrEmpty(p!.PlayerCardId) ? p.PlayerCardId : _friendCards.Get(puuid);
+
+            var tier = online && p!.CompetitiveTier > 2 ? p.CompetitiveTier : _stats.CachedRank(puuid)?.Tier;
+            if (tier == null) withoutRank.Add(puuid);
+
+            var status = !online ? "offline" : p!.SessionLoopState switch { "INGAME" => "ingame", "PREGAME" => "pregame", _ => "menus" };
+            list.Add(new FriendDto(name, tag, status,
+                online ? _content.QueueName(p!.QueueId, p.IsCustomGame) : "",
+                tier == null ? null : Rank(tier.Value),
+                GameContent.CardWide(cardId),
+                GameContent.CardSmall(cardId)));
         }
+        _friendCards.Save();
+        StartFriendRanks(withoutRank);
 
         var order = new Dictionary<string, int> { ["ingame"] = 0, ["pregame"] = 1, ["menus"] = 2, ["offline"] = 3 };
         return list.OrderBy(f => order[f.Status]).ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    // Ranks of friends without a presence, loaded slowly in the background after the match players.
+    private void StartFriendRanks(List<string> puuids)
+    {
+        if (puuids.Count == 0 || _friendRanks is { IsCompleted: false } || _enrich is { IsCompleted: false }) return;
+        var ct = _cts.Token;
+        _friendRanks = Task.Run(async () =>
+        {
+            try
+            {
+                foreach (var p in puuids.Take(40))
+                {
+                    await _stats.GetRankAsync(p, ct);
+                    await Task.Delay(300, ct);
+                }
+                Wake();
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Log.Warn("Friend ranks stopped: " + ex.Message);
+            }
+        }, ct);
     }
 
     // ---------- Helpers ----------

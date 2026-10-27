@@ -165,11 +165,12 @@ function renderFriends(state, settings, ui) {
   const offline = list.filter((f) => f.status === "offline");
   const row = (f) => `<div class="friend ${f.status}">
       ${img(f.card, "card-bg", "")}
+      ${img(f.avatar, "avatar", initials(f.name))}
       <div class="who">
         <div class="name">${esc(f.name)}<span class="tag">#${esc(f.tag)}</span></div>
         <div class="status ${f.status}">${t("friends.status." + f.status)}${f.mode && f.status !== "offline" ? " — " + esc(f.mode) : ""}</div>
       </div>
-      ${rankImg(f.rank)}
+      ${f.rank ? rankImg(f.rank) : ""}
     </div>`;
 
   return `<div class="page friends">

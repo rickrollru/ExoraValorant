@@ -62,7 +62,7 @@ const MOCK = (() => {
     },
     match: { map, mode: "Swiftplay", state: "INGAME", score: { ally: 2, enemy: 1 }, allies, enemies, single: false },
     friends: [
-      { name: "TRAUMADAS LOVER", tag: "Cul0n", status: "ingame", mode: "Swiftplay", rank: rank(16), card: card("33c1f011-4eca-068c-9751-f68c788b2eee") },
+      { name: "TRAUMADAS LOVER", tag: "Cul0n", status: "ingame", mode: "Swiftplay", rank: rank(16), card: card("33c1f011-4eca-068c-9751-f68c788b2eee"), avatar: `${media}/playercards/33c1f011-4eca-068c-9751-f68c788b2eee/smallart.png` },
       { name: "TP Jayko シ", tag: "bot", status: "ingame", mode: "Competitive", rank: rank(19), card: card("bb6ae873-43ec-efb4-3ea6-93ac00a82d4e") },
       { name: "noteminimal66", tag: "2134q", status: "pregame", mode: "Swiftplay", rank: rank(9), card: card("7fdbe3ef-4fd8-a5a6-0ab2-0ab06da7caa9") },
       { name: "cosmo", tag: "김채원", status: "ingame", mode: "", rank: rank(21), card: card("30b64514-440d-1261-f863-6bbb180263f9") },
@@ -70,7 +70,7 @@ const MOCK = (() => {
       { name: "AleSuw", tag: "Niza", status: "ingame", mode: "Swiftplay", rank: rank(0), card: card("9fb348bc-41a0-91ad-8a3e-818035c4e561") },
       { name: "yepa2836", tag: "LAN", status: "menus", mode: "Competitive", rank: rank(21), card: card("33c1f011-4eca-068c-9751-f68c788b2eee") },
       { name: "midnight", tag: "0001", status: "offline", mode: "", rank: rank(12), card: null },
-      { name: "kuro", tag: "neko", status: "offline", mode: "", rank: rank(15), card: null },
+      { name: "kuro", tag: "neko", status: "offline", mode: "", rank: null, card: null },
     ],
     discord: { connected: true },
     valorantRunning: true,

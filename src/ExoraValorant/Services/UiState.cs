@@ -86,6 +86,6 @@ public sealed record MatchDto
     public bool Single { get; init; }
 }
 
-public sealed record FriendDto(string Name, string Tag, string Status, string Mode, RankDto? Rank, string? Card);
+public sealed record FriendDto(string Name, string Tag, string Status, string Mode, RankDto? Rank, string? Card, string? Avatar);
 
 public sealed record NewsDto(string Date, string Title, string Text, string Url);

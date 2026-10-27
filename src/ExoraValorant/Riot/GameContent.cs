@@ -107,7 +107,8 @@ public sealed class GameContent
             {
                 if (t == null) continue;
                 var n = t["tier"]?.GetValue<int>() ?? 0;
-                tiers[n] = new TierInfo(n, TitleCase(Str(t, "tierName")), n > 2 ? NullIfEmpty(Str(t, "smallIcon")) : null);
+                // Tier 0 is "Unranked" and has its own icon; 1 and 2 are unused.
+                tiers[n] = new TierInfo(n, TitleCase(Str(t, "tierName")), n is 0 or > 2 ? NullIfEmpty(Str(t, "smallIcon")) : null);
             }
             Tiers = tiers;
         }
