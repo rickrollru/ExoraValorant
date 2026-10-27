@@ -72,6 +72,7 @@ public sealed record PlayerDto
     public double? Kd { get; init; }
     public int? Hs { get; init; }
     public int? Party { get; init; }
+    public bool PartyGuess { get; init; }
     public string? Card { get; init; }
 }
 

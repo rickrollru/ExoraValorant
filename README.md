@@ -37,7 +37,9 @@ gives it. It doesn't read game memory or change game files, and players who hide
 When a match is found, Exora switches from Home to this page by itself.
 
 - **Both teams** in agent select and in game: agent, name#tag, title, level, rank with RR or leaderboard place.
-- **Parties:** players queued together are framed in one colour with a "Party · 2" label.
+- **Parties:** players queued together are framed in one colour with a "Party · 2" label. Your own party and
+  your friends' parties are exact. With **Detect parties from last matches** on, Exora also guesses other parties
+  from each player's previous match and draws them with a dashed "Likely party" frame.
 - **Click a player** to see their peak rank and act, last act rank, win rate, K/D and HS% from their latest
   competitive match.
 - Average rank of each team; deathmatch shows a single list.
@@ -91,13 +93,8 @@ The live preview shows exactly what Discord will show, for the game and for the 
 4. Exora uses Microsoft Edge WebView2, which ships with Windows 10 / 11. If it's missing, Exora offers to download it.
 
 ### Discord status
-Discord shows "Playing …" with the name of a Discord application, so Exora needs one of yours:
-
-1. Open the [Discord Developer Portal](https://discord.com/developers/applications), click **New Application**
-   and name it `Valorant`.
-2. Copy the **Application ID** into Exora: **Discord RPC → Client ID**.
-
-Map, agent and rank images are linked from valorant-api.com, nothing has to be uploaded.
+Works out of the box: keep Discord running on the same PC and the status appears by itself.
+Turn it off or change what it shows on the **Discord RPC** page.
 
 ### Building from source (Windows)
 You need [Visual Studio](https://visualstudio.microsoft.com/) 2022 (17.8+) or 2026 with ".NET desktop development"

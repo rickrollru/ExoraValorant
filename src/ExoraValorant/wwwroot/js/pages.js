@@ -123,8 +123,8 @@ function teamCard(side, title, players, parties, settings) {
       ${avgRank ? `<span class="avg badge" title="${t("match.avg")}">${esc(avgRank.name)}</span>` : ""}
     </div>
     <div class="players">${groupByParty(players, parties).map((g) => g.color
-      ? `<div class="party-group" data-key="party-${g.id}" style="--party:${g.color}">
-           <span class="party-label">${icon("link")}${t("match.partyOf", { n: g.players.length })}</span>
+      ? `<div class="party-group${g.guess ? " guess" : ""}" data-key="party-${g.id}" style="--party:${g.color}"${g.guess ? ` title="${t("match.partyGuessHint")}"` : ""}>
+           <span class="party-label">${icon("link")}${t(g.guess ? "match.partyGuess" : "match.partyOf", { n: g.players.length })}</span>
            ${g.players.map((p) => playerRow(p, parties, settings)).join("")}
          </div>`
       : playerRow(g.players[0], parties, settings)).join("")}</div>
@@ -139,7 +139,7 @@ function groupByParty(players, parties) {
   players.forEach((p) => {
     const color = p.party != null ? parties[p.party] : null;
     if (!color) return groups.push({ players: [p] });
-    if (!byParty[p.party]) groups.push((byParty[p.party] = { id: p.party, color, players: [] }));
+    if (!byParty[p.party]) groups.push((byParty[p.party] = { id: p.party, color, guess: !!p.partyGuess, players: [] }));
     byParty[p.party].players.push(p);
   });
   return groups;
@@ -246,12 +246,6 @@ function renderRpc(state, settings, ui) {
             <div class="field" style="margin-top:10px"><div class="field-label">${t("rpc.buttonLabel")}</div><input class="input" data-text="rpc.button.label" maxlength="32" value="${esc(r.button.label)}"></div>
             <div class="field"><div class="field-label">${t("rpc.buttonUrl")}</div><input class="input" data-text="rpc.button.url" value="${esc(r.button.url)}" placeholder="https://"></div>
           </div>
-        </div>
-        <div class="card">
-          <div class="section-title">${t("rpc.app")}</div>
-          <div class="field-label">${t("rpc.clientId")}</div>
-          <input class="input num" data-text="rpc.clientId" value="${esc(r.clientId)}" placeholder="000000000000000000">
-          <div class="desc" style="margin-top:8px">${t("rpc.clientIdDesc")}</div>
         </div>
       </div>
       <div class="rpc-col rpc-preview">
@@ -364,6 +358,7 @@ function renderSettings(state, settings) {
           <div class="sep"></div>
           <div class="row"><div class="label">${t("settings.lang")}</div>${seg("lang", s.lang, [["ru", "Русский"], ["en", "English"]])}</div>
           <div class="row"><div class="label">${t("settings.streamer")}<small>${t("settings.streamerDesc")}</small></div>${toggle("streamerMode", s.streamerMode)}</div>
+          <div class="row"><div class="label">${t("settings.inferParties")}<small>${t("settings.inferPartiesDesc")}</small></div>${toggle("inferParties", s.inferParties)}</div>
           <div class="row"><div class="label">${t("settings.gpu")}<small>${t("settings.gpuDesc")}</small></div>${toggle("hardwareAcceleration", s.hardwareAcceleration)}</div>
           <div class="row"><div class="label">${t("settings.refresh")}</div>${seg("refreshSec", s.refreshSec, [[2, t("sec", { n: 2 })], [3, t("sec", { n: 3 })], [5, t("sec", { n: 5 })]])}</div>
         </div>

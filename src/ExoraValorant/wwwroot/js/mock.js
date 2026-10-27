@@ -38,9 +38,9 @@ const MOCK = (() => {
   const enemies = [
     player({ name: "Reyna", hidden: true, agent: A.reyna, title: "Aimbot", level: 345, rankTier: 16, rr: 20, peakTier: 18, prevTier: 16, wr: 52, games: 61, kd: 1.22, hs: 25, party: 1 }),
     player({ name: "rudnez", tag: "9888", agent: A.jett, title: "Green Flag", level: 115, rankTier: 16, rr: 71, peakTier: 17, prevTier: 15, wr: 50, games: 22, kd: 1.01, hs: 20, party: 1 }),
-    player({ name: "Saasil花Lu", tag: "月の花 鬼", agent: A.skye, title: "Wub Wub", level: 274, rankTier: 17, rr: 5, peakTier: 19, prevTier: 17, wr: 47, games: 54, kd: 0.97, hs: 18, party: 2 }),
+    player({ name: "Saasil花Lu", tag: "月の花 鬼", agent: A.skye, title: "Wub Wub", level: 274, rankTier: 17, rr: 5, peakTier: 19, prevTier: 17, wr: 47, games: 54, kd: 0.97, hs: 18, party: 2, partyGuess: true }),
     player({ name: "Sova", hidden: true, agent: A.sova, title: "", level: 0, levelHidden: true, rankTier: 18, rr: 90, peakTier: 20, prevTier: 18, wr: 58, games: 88, kd: 1.4, hs: 31 }),
-    player({ name: "Viper", hidden: true, agent: A.viper, title: "Aura", level: 475, rankTier: 15, rr: 42, peakTier: 16, prevTier: 14, wr: 45, games: 26, kd: 0.88, hs: 16, party: 2 }),
+    player({ name: "Viper", hidden: true, agent: A.viper, title: "Aura", level: 475, rankTier: 15, rr: 42, peakTier: 16, prevTier: 14, wr: 45, games: 26, kd: 0.88, hs: 16, party: 2, partyGuess: true }),
   ];
 
   const map = { name: "Split", splash: `${media}/maps/d960549e-485c-e861-8d71-aa9d1aed12a2/splash.png`, icon: `${media}/maps/d960549e-485c-e861-8d71-aa9d1aed12a2/listviewicon.png` };

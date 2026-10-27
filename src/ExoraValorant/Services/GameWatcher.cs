@@ -469,6 +469,24 @@ public sealed class GameWatcher : IDisposable
         if (_myPartyId != null)
             foreach (var member in _myParty.Where(puuids.Contains))
                 partyOf[member] = _myPartyId;
+        // Guessed parties (players who shared a party in their last match) only for players without a known one.
+        var guessed = new HashSet<string>();
+        if (_settings().InferParties)
+        {
+            var known = partyOf.Values.GroupBy(v => v).Where(g => g.Count() > 1).SelectMany(g => g).ToHashSet();
+            var hints = puuids.Where(p => !partyOf.TryGetValue(p, out var k) || !known.Contains(k))
+                .Select(p => (Puuid: p, Party: _stats.CachedLastParty(p)))
+                .Where(x => !string.IsNullOrEmpty(x.Party))
+                .GroupBy(x => x.Party!)
+                .Where(g => g.Count() > 1);
+            foreach (var g in hints)
+            foreach (var x in g)
+            {
+                partyOf[x.Puuid] = "last:" + g.Key;
+                guessed.Add(x.Puuid);
+            }
+        }
+
         var partyIndex = partyOf.Values.GroupBy(v => v).Where(g => g.Count() > 1).Select(g => g.Key)
             .Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
 
@@ -509,6 +527,7 @@ public sealed class GameWatcher : IDisposable
                 Kd = combat?.Kd,
                 Hs = combat?.Hs,
                 Party = partyOf.TryGetValue(puuid, out var party) && partyIndex.TryGetValue(party, out var idx) ? idx : null,
+                PartyGuess = guessed.Contains(puuid),
                 Card = GameContent.CardWide(identity?["PlayerCardID"]?.GetValue<string>()),
             });
         }
@@ -523,7 +542,11 @@ public sealed class GameWatcher : IDisposable
         if (_enrich is { IsCompleted: false }) return;
         var missingRank = puuids.Where(p => _stats.CachedRank(p) == null).ToList();
         var missingCombat = puuids.Where(p => _statsRequested.ContainsKey(p) && _stats.CachedCombat(p) == null).ToList();
-        if (missingRank.Count == 0 && missingCombat.Count == 0) return;
+        // Party guesses come last and slowly: one full match download per player.
+        var missingParty = _settings().InferParties
+            ? puuids.Where(p => p != _riot.Puuid && !_myParty.Contains(p) && _stats.CachedLastParty(p) == null).ToList()
+            : [];
+        if (missingRank.Count == 0 && missingCombat.Count == 0 && missingParty.Count == 0) return;
 
         var ct = _cts.Token;
         _enrich = Task.Run(async () =>
@@ -541,6 +564,12 @@ public sealed class GameWatcher : IDisposable
                     await Task.Delay(150, ct);
                 }
                 Wake();
+                foreach (var p in missingParty)
+                {
+                    await _stats.GetLastPartyAsync(p, ct);
+                    Wake();
+                    await Task.Delay(400, ct);
+                }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

@@ -11,6 +11,9 @@ namespace Exora.Discord;
 public sealed class DiscordPresence : IDisposable
 {
     private DiscordRpcClient? _client;
+    // Exora's Discord application; its name is what Discord shows as "Playing …".
+    private const string ClientId = "1564586362622054521";
+
     private string _clientId = "";
     private bool _connected;
 
@@ -19,14 +22,14 @@ public sealed class DiscordPresence : IDisposable
     public void Update(UiState state, AppSettings settings, GameContent content)
     {
         var rpc = settings.Rpc;
-        if (!rpc.Enabled || string.IsNullOrWhiteSpace(rpc.ClientId) || state.Status == null)
+        if (!rpc.Enabled || state.Status == null)
         {
-            if (!rpc.Enabled || string.IsNullOrWhiteSpace(rpc.ClientId)) Stop();
+            if (!rpc.Enabled) Stop();
             else _client?.ClearPresence();
             return;
         }
 
-        EnsureClient(rpc.ClientId.Trim());
+        EnsureClient(ClientId);
         try
         {
             _client!.SetPresence(Build(state, settings, content));

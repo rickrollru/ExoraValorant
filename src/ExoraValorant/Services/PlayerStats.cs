@@ -12,9 +12,11 @@ public sealed record CombatStats(double? Kd, int? Hs);
 public sealed class PlayerStats(RiotClient riot, GameContent content)
 {
     private static readonly TimeSpan RankTtl = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan LastPartyTtl = TimeSpan.FromMinutes(20);
 
     private readonly ConcurrentDictionary<string, (DateTime At, RankInfo Info)> _ranks = new();
     private readonly ConcurrentDictionary<string, CombatStats> _combat = new();
+    private readonly ConcurrentDictionary<string, (DateTime At, string PartyId)> _lastParty = new();
 
     public void Clear()
     {
@@ -105,6 +107,33 @@ public sealed class PlayerStats(RiotClient riot, GameContent content)
         _combat[puuid] = stats;
         return stats;
     }
+
+    // Party id the player had in their last finished match (any mode), or "" when they played solo.
+    // Two players of the current match with the same id there most likely queued together again.
+    // Costs a full match download, so it runs only with the "detect parties" setting on. When that match
+    // was competitive, its K/D and HS% are kept too, which saves the separate download later.
+    public async Task<string> GetLastPartyAsync(string puuid, CancellationToken ct)
+    {
+        if (_lastParty.TryGetValue(puuid, out var cached) && DateTime.UtcNow - cached.At < LastPartyTtl) return cached.PartyId;
+
+        var history = await riot.PdGetAsync($"/match-history/v1/history/{puuid}?startIndex=0&endIndex=1", ct);
+        var matchId = history?["History"]?[0]?["MatchID"]?.GetValue<string>();
+        var partyId = "";
+        if (matchId != null && await GetMatchDetailsAsync(matchId, ct) is { } details)
+        {
+            var players = details["players"]?.AsArray() ?? [];
+            var me = players.FirstOrDefault(p => p?["subject"]?.GetValue<string>() == puuid);
+            var id = me?["partyId"]?.GetValue<string>() ?? "";
+            if (id != "" && players.Count(p => p?["partyId"]?.GetValue<string>() == id) > 1) partyId = id;
+            if (details["matchInfo"]?["queueID"]?.GetValue<string>() == "competitive" && me != null)
+                _combat.TryAdd(puuid, ComputeCombat(details, puuid));
+        }
+        _lastParty[puuid] = (DateTime.UtcNow, partyId);
+        return partyId;
+    }
+
+    public string? CachedLastParty(string puuid) =>
+        _lastParty.TryGetValue(puuid, out var p) && DateTime.UtcNow - p.At < LastPartyTtl ? p.PartyId : null;
 
     // A full match is 1-3 MB of JSON. It is never cached: callers keep only the few numbers they need,
     // otherwise memory grows by tens of megabytes with every match played.

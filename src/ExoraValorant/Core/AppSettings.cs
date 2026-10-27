@@ -15,6 +15,7 @@ public sealed class AppSettings
     public bool StreamerMode { get; set; }
     public int RefreshSec { get; set; } = 3;
     public bool HardwareAcceleration { get; set; } = true;
+    public bool InferParties { get; set; }
     public RpcSettings Rpc { get; set; } = new();
 
     public static AppSettings Load()
@@ -52,7 +53,6 @@ public sealed class AppSettings
 public sealed class RpcSettings
 {
     public bool Enabled { get; set; } = true;
-    public string ClientId { get; set; } = "";
     public RpcImages Game { get; set; } = new() { Large = "map", Small = "agent" };
     public RpcImages Lobby { get; set; } = new() { Large = "logo", Small = "rank" };
     public bool ShowName { get; set; }

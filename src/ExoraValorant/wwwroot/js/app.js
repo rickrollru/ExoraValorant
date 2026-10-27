@@ -2,9 +2,9 @@
 
 const DEFAULT_SETTINGS = {
   lang: "ru", theme: "dark", accent: "#4F8CFF", tint: 0, font: "Manrope", scale: 1, anim: "full",
-  streamerMode: false, refreshSec: 3, hardwareAcceleration: true,
+  streamerMode: false, refreshSec: 3, hardwareAcceleration: true, inferParties: false,
   rpc: {
-    enabled: true, clientId: "",
+    enabled: true,
     game: { large: "map", small: "agent" },
     lobby: { large: "logo", small: "rank" },
     showName: false, showParty: true, showScore: true, showTimer: true,
