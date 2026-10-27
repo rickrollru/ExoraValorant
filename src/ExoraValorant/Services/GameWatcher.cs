@@ -293,9 +293,10 @@ public sealed class GameWatcher : IDisposable
             var agentDto = agent == null ? null : new AgentDto(agent.Name, agent.Icon);
             lastAgent ??= agentDto;
             var stats = me["stats"];
+            // Free-for-all modes: placement by kills instead of a round score.
             var score = twoTeams && myTeam != null && other != null
                 ? $"{PlayerStats.Int(myTeam, "roundsWon")}–{PlayerStats.Int(other, "roundsWon")}"
-                : $"{PlayerStats.Int(stats, "kills")} {(_contentLang == "ru" ? "уб." : "K")}";
+                : $"#{Placement(details, puuid)}";
 
             list.Add(new RecentDto(
                 draw ? "D" : won ? "W" : "L",
@@ -306,6 +307,13 @@ public sealed class GameWatcher : IDisposable
                 $"{PlayerStats.Int(stats, "kills")}/{PlayerStats.Int(stats, "deaths")}/{PlayerStats.Int(stats, "assists")}"));
         }
         return (list, lastAgent);
+    }
+
+    private static int Placement(JsonNode details, string puuid)
+    {
+        var myKills = PlayerStats.Int(details["players"]?.AsArray().FirstOrDefault(p => p?["subject"]?.GetValue<string>() == puuid)?["stats"], "kills");
+        var better = details["players"]?.AsArray().Count(p => PlayerStats.Int(p?["stats"], "kills") > myKills) ?? 0;
+        return better + 1;
     }
 
     // ---------- Match ----------
