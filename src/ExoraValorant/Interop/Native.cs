@@ -9,7 +9,11 @@ internal static partial class Native
 
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    private const int DWMWA_BORDER_COLOR = 34;
+    private const int DWMWCP_DONOTROUND = 1;
     private const int DWMWCP_ROUND = 2;
+    private const int DWMWA_COLOR_NONE = unchecked((int)0xFFFFFFFE);
+    private const int DWMWA_COLOR_DEFAULT = unchecked((int)0xFFFFFFFF);
     private const int SW_RESTORE = 9;
 
     // Hit-test codes for resizing a borderless window from the web content.
@@ -46,12 +50,15 @@ internal static partial class Native
     }
 
     // Rounded corners and a dark frame on Windows 11; silently ignored on Windows 10.
-    public static void StyleWindow(IntPtr handle, bool dark)
+    // A maximised window gets square corners and no border, otherwise Windows leaves a thin gap at the screen edges.
+    public static void StyleWindow(IntPtr handle, bool dark, bool maximized)
     {
         try
         {
-            var corner = DWMWCP_ROUND;
+            var corner = maximized ? DWMWCP_DONOTROUND : DWMWCP_ROUND;
             DwmSetWindowAttribute(handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref corner, sizeof(int));
+            var border = maximized ? DWMWA_COLOR_NONE : DWMWA_COLOR_DEFAULT;
+            DwmSetWindowAttribute(handle, DWMWA_BORDER_COLOR, ref border, sizeof(int));
             var darkMode = dark ? 1 : 0;
             DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkMode, sizeof(int));
         }

@@ -11,6 +11,7 @@ public sealed class GameWatcher : IDisposable
 {
     private static readonly TimeSpan FriendsTtl = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan ProfileTtl = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan MineGrace = TimeSpan.FromSeconds(20);
 
     private readonly Func<AppSettings> _settings;
     private readonly RiotClient _riot = new();
@@ -33,6 +34,9 @@ public sealed class GameWatcher : IDisposable
     private MeDto? _me;
     private DateTime _profileAt;
     private bool _profileDirty = true;
+    private Presence? _lastMine;
+    private DateTime _lastMineAt;
+    private bool _mineMissingLogged;
 
     public event Action<UiState>? StateChanged;
     public UiState Current { get; private set; } = new() { Connection = "connecting" };
@@ -100,6 +104,7 @@ public sealed class GameWatcher : IDisposable
         _friendsList = [];
         _friendsAt = default;
         MyPresence = null;
+        _lastMine = null;
     }
 
     private async Task TickAsync(CancellationToken ct)
@@ -130,6 +135,23 @@ public sealed class GameWatcher : IDisposable
 
         var presences = Presence.Parse(await _riot.LocalGetAsync("/chat/v4/presences", ct));
         var mine = presences.FirstOrDefault(p => p.Puuid == _riot.Puuid && p.IsValorant);
+        if (mine != null)
+        {
+            _lastMine = mine;
+            _lastMineAt = DateTime.UtcNow;
+            _mineMissingLogged = false;
+        }
+        else
+        {
+            if (!_mineMissingLogged)
+            {
+                var own = presences.Where(p => p.Puuid == _riot.Puuid).Select(p => p.Describe()).ToList();
+                Log.Warn($"Own Valorant presence not found ({presences.Count} presences; own entries: {(own.Count == 0 ? "none" : string.Join(" | ", own))})");
+                _mineMissingLogged = true;
+            }
+            // The chat service sometimes skips our entry for a poll or two; keep the last one briefly.
+            if (_lastMine != null && DateTime.UtcNow - _lastMineAt < MineGrace) mine = _lastMine;
+        }
         MyPresence = mine;
 
         var loopState = mine?.SessionLoopState;
@@ -258,16 +280,18 @@ public sealed class GameWatcher : IDisposable
             var myTeam = teams.FirstOrDefault(t => t?["teamId"]?.GetValue<string>() == teamId);
             var other = teams.FirstOrDefault(t => t?["teamId"]?.GetValue<string>() != teamId);
             var won = myTeam?["won"]?.GetValue<bool>() == true;
-            var draw = myTeam != null && other != null && PlayerStats.Int(myTeam, "roundsWon") == PlayerStats.Int(other, "roundsWon") && !won && other["won"]?.GetValue<bool>() != true;
+            // Deathmatch and similar modes have a "team" per player: no round score, no draws.
+            var twoTeams = teams.Count == 2;
+            var draw = twoTeams && myTeam != null && other != null && !won && other["won"]?.GetValue<bool>() != true;
 
             var info = details["matchInfo"];
             var agent = _content.Agent(me["characterId"]?.GetValue<string>());
             var agentDto = agent == null ? null : new AgentDto(agent.Name, agent.Icon);
             lastAgent ??= agentDto;
             var stats = me["stats"];
-            var score = myTeam != null && other != null
+            var score = twoTeams && myTeam != null && other != null
                 ? $"{PlayerStats.Int(myTeam, "roundsWon")}–{PlayerStats.Int(other, "roundsWon")}"
-                : $"{PlayerStats.Int(stats, "kills")} K";
+                : $"{PlayerStats.Int(stats, "kills")} {(_contentLang == "ru" ? "уб." : "K")}";
 
             list.Add(new RecentDto(
                 draw ? "D" : won ? "W" : "L",

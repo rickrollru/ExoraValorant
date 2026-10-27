@@ -27,7 +27,7 @@ function imgFailed(el) {
 // Loaded images fade in instead of popping.
 function img(url, cls, placeholder) {
   const ok = url && !FAILED_IMAGES.has(url);
-  return `<div class="img ${cls || ""}"><span class="ph">${placeholder ?? ""}</span>${ok ? `<img src="${esc(url)}" alt="" onload="this.classList.add('ready')" onerror="imgFailed(this)">` : ""}</div>`;
+  return `<div class="img ${cls || ""}"><span class="ph">${placeholder ?? ""}</span>${ok ? `<img class="pic" src="${esc(url)}" alt="" onload="this.classList.add('ready')" onerror="imgFailed(this)">` : ""}</div>`;
 }
 
 // Patches `from` in place to match `to`, keeping nodes that did not change. Periodic state updates use this
@@ -79,6 +79,14 @@ function morphAttrs(from, to) {
     if (to.hasAttribute(name)) continue;
     // Sliding pills are positioned from JS, not from the markup.
     if (from.classList.contains("seg-pill") || from.classList.contains("nav-pill")) continue;
+    if (name === "class") {
+      // Runtime classes such as "ready" (image loaded) must survive even when the markup has no class at all.
+      const keep = KEEP_CLASSES.filter((c) => from.classList.contains(c));
+      if (keep.length) {
+        from.setAttribute("class", keep.join(" "));
+        continue;
+      }
+    }
     from.removeAttribute(name);
   }
 }

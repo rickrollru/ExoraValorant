@@ -55,7 +55,8 @@ function renderSidebarFoot() {
   const st = STATE.status;
   const me = STATE.me;
   const live = !!(st && st.state);
-  let stateText = STATE.connection === "connecting" ? t("state.connecting") : stateLabel(st);
+  let stateText = STATE.connection === "connecting" ? t("state.connecting")
+    : STATE.connection === "ok" && !live ? t("state.online") : stateLabel(st);
   patchHtml(document.getElementById("me-card"), `
     ${rankImg(me && me.rank)}
     <div class="meta">

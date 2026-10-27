@@ -44,6 +44,8 @@ public sealed class GameContent
         ["newmap"] = ("New Map", "Новая карта"),
         ["valaram"] = ("All Random One Site", "All Random One Site"),
         ["skirmish"] = ("Skirmish", "Стычка"),
+        ["skirmish2v2"] = ("Skirmish 2v2", "Стычка 2 на 2"),
+        ["skirmish1v1"] = ("Skirmish 1v1", "Стычка 1 на 1"),
         ["custom"] = ("Custom Game", "Своя игра"),
         [""] = ("Custom Game", "Своя игра"),
     };
@@ -191,9 +193,9 @@ public sealed class GameContent
         if (act == null) return "";
         var a = SeasonNumber(act);
         var e = episode == null ? null : SeasonNumber(episode);
-        // Newer seasons are named like "V25 ACT 3"; use the episode name as is then.
-        if (e == null && episode != null) return $"{episode} A{a}";
-        return e != null ? $"E{e} A{a}" : $"A{a}";
+        // Newer episodes are named like "V26" instead of a number; show those as is.
+        if (e == null) return $"A{a}";
+        return int.TryParse(e, out _) ? $"E{e} A{a}" : $"{e} A{a}";
     }
 
     private static string? SeasonNumber(string name)

@@ -13,6 +13,7 @@ const I18N = {
 
     "state.offline": "Valorant не запущен",
     "state.connecting": "Подключение…",
+    "state.online": "В сети",
     "state.MENUS": "В лобби",
     "state.PREGAME": "Выбор агента",
     "state.INGAME": "В игре",
@@ -157,6 +158,7 @@ const I18N = {
 
     "state.offline": "Valorant is not running",
     "state.connecting": "Connecting…",
+    "state.online": "Online",
     "state.MENUS": "In lobby",
     "state.PREGAME": "Agent select",
     "state.INGAME": "In game",

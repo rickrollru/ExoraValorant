@@ -39,6 +39,10 @@ public sealed class Presence
 
     public bool IsValorant => _private != null && Bool("isValid") != false;
 
+    // Short description for the log when our own presence can't be used.
+    public string Describe() =>
+        $"product={Product} state={ChatState} private={(_private == null ? "none" : "ok")} isValid={Bool("isValid")?.ToString() ?? "-"} loop={SessionLoopState ?? "-"}";
+
     public string? SessionLoopState => Str("sessionLoopState");
     public string? QueueId => Str("queueId");
     public string? MatchMap => Str("matchMap");
@@ -91,11 +95,14 @@ public sealed class Presence
         return v is JsonValue jv && jv.TryGetValue<bool>(out var b) ? b : null;
     }
 
+    // Usually base64-encoded JSON; accept plain JSON too in case Riot stops encoding it.
     private static JsonObject? Decode(string? b64)
     {
-        if (string.IsNullOrEmpty(b64) || b64.Contains('{')) return null;
+        if (string.IsNullOrEmpty(b64)) return null;
         try
         {
+            var trimmed = b64.TrimStart();
+            if (trimmed.StartsWith('{')) return JsonNode.Parse(trimmed) as JsonObject;
             return JsonNode.Parse(Encoding.UTF8.GetString(Convert.FromBase64String(b64))) as JsonObject;
         }
         catch

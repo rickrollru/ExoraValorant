@@ -50,13 +50,17 @@ public sealed class MainForm : Form
         _discord.ConnectionChanged += connected => _watcher.SetDiscord(connected);
 
         Load += async (_, _) => await InitWebViewAsync();
-        Resize += (_, _) => PostWindowState();
+        Resize += (_, _) =>
+        {
+            ApplyFrame();
+            PostWindowState();
+        };
     }
 
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        Native.StyleWindow(Handle, _settings.Theme != "light");
+        ApplyFrame();
     }
 
     // Lets the window minimise from the taskbar despite having no border.
@@ -202,7 +206,7 @@ public sealed class MainForm : Form
 
         ApplyZoom();
         ApplyIcon();
-        Native.StyleWindow(Handle, _settings.Theme != "light");
+        ApplyFrame();
         _discord.Update(_watcher.Current, _settings, _watcher.Content);
         if (langChanged)
         {
@@ -233,6 +237,17 @@ public sealed class MainForm : Form
                 Close();
                 break;
         }
+    }
+
+    private FormWindowState _framedState = (FormWindowState)(-1);
+    private string _framedTheme = "";
+
+    private void ApplyFrame()
+    {
+        if (!IsHandleCreated || (_framedState == WindowState && _framedTheme == _settings.Theme)) return;
+        _framedState = WindowState;
+        _framedTheme = _settings.Theme;
+        Native.StyleWindow(Handle, _settings.Theme != "light", WindowState == FormWindowState.Maximized);
     }
 
     // Dragging a maximised window restores it and keeps the cursor at the same relative spot of the title bar.
