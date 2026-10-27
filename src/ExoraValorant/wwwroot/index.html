@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exora</title>
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="backdrop" id="backdrop"><div class="backdrop-img" id="backdrop-img"></div></div>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand drag">
+        <svg class="logo" viewBox="0 0 1024 1024" aria-hidden="true">
+          <path class="logo-base" d="M760 266 L410 636 C350 698 305 736 262 736 C214 736 206 680 246 642"/>
+          <path class="logo-accent" d="M287 266 L758 778"/>
+        </svg>
+        <span class="brand-name">Exora</span>
+      </div>
+
+      <nav class="nav" id="nav"></nav>
+
+      <div class="sidebar-foot">
+        <div class="me-card" id="me-card"></div>
+        <button class="btn btn-launch" id="btn-launch"></button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="titlebar drag">
+        <div class="titlebar-title" id="titlebar-title"></div>
+        <div class="win-buttons">
+          <button class="win-btn" data-win="min" aria-label="minimize"><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></button>
+          <button class="win-btn" data-win="max" aria-label="maximize"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" rx="1"/></svg></button>
+          <button class="win-btn win-close" data-win="close" aria-label="close"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
+        </div>
+      </header>
+      <section class="content" id="content"></section>
+    </main>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+
+  <div class="resize n" data-resize="n"></div><div class="resize s" data-resize="s"></div>
+  <div class="resize e" data-resize="e"></div><div class="resize w" data-resize="w"></div>
+  <div class="resize ne" data-resize="ne"></div><div class="resize nw" data-resize="nw"></div>
+  <div class="resize se" data-resize="se"></div><div class="resize sw" data-resize="sw"></div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/mock.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/pages.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
