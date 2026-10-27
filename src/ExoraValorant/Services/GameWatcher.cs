@@ -192,11 +192,13 @@ public sealed class GameWatcher : IDisposable
         if (!isRange && loopState == "PREGAME") match = await BuildPregameAsync(mine!, presences, ct);
         else if (!isRange && loopState == "INGAME") match = await BuildCoregameAsync(mine!, presences, ct);
 
-        if (match != null)
-        {
-            var me = match.Allies.FirstOrDefault(p => p.IsMe);
-            if (me?.Agent != null) _me = _me with { Agent = me.Agent };
-        }
+        // The agent of the current match. In agent select only once it is locked, so hovering doesn't show up.
+        AgentDto? currentAgent = null;
+        var meInMatch = match?.Allies.FirstOrDefault(p => p.IsMe);
+        if (meInMatch?.Agent != null && (match!.State == "INGAME" || meInMatch.Locked)) currentAgent = meInMatch.Agent;
+        if (currentAgent != null) _me = _me with { Agent = currentAgent };
+        else if ((loopState == "INGAME" || loopState == "PREGAME") && match == null && !isRange)
+            Log.Warn($"In {loopState} but the match could not be loaded; agent unknown");
 
         var friends = await BuildFriendsAsync(presences, ct);
 
@@ -207,7 +209,7 @@ public sealed class GameWatcher : IDisposable
             var score = loopState == "INGAME" && mine.ScoreAlly != null
                 ? new ScoreDto(mine.ScoreAlly ?? 0, mine.ScoreEnemy ?? 0)
                 : null;
-            status = new StatusDto(loopState, mode, mine.QueueId ?? "", new PartyDto(mine.PartySize, mine.MaxPartySize), score, _stateSince);
+            status = new StatusDto(loopState, mode, mine.QueueId ?? "", new PartyDto(mine.PartySize, mine.MaxPartySize), score, _stateSince, currentAgent);
         }
 
         Publish(new UiState

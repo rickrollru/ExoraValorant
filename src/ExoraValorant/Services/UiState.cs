@@ -28,7 +28,8 @@ public sealed record ScoreDto(int Ally, int Enemy);
 
 public sealed record PartyDto(int Size, int Max);
 
-public sealed record StatusDto(string State, string Mode, string Queue, PartyDto Party, ScoreDto? Score, long Since);
+// Agent = the agent in the current match (locked in agent select); null in the lobby or while unknown.
+public sealed record StatusDto(string State, string Mode, string Queue, PartyDto Party, ScoreDto? Score, long Since, AgentDto? Agent);
 
 public sealed record RecentDto(string Result, AgentDto? Agent, string Map, string Mode, string Score, string Kda);
 

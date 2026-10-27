@@ -47,7 +47,7 @@ const MOCK = (() => {
 
   const state = {
     connection: "ok",
-    status: { state: "INGAME", mode: "Swiftplay", queue: "swiftplay", party: { size: 2, max: 5 }, score: { ally: 2, enemy: 1 }, since: Date.now() - 3 * 60e3 },
+    status: { state: "INGAME", mode: "Swiftplay", queue: "swiftplay", party: { size: 2, max: 5 }, score: { ally: 2, enemy: 1 }, since: Date.now() - 3 * 60e3, agent: A.fade },
     me: {
       name: "RawenCat", tag: "rawr", title: "Aimbot", level: 226, card: allies[0].card,
       rank: rank(21), rr: 47, peak: { ...rank(22), act: "E9 A2" }, wr: 56, games: 48,

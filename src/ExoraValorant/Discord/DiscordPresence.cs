@@ -64,11 +64,11 @@ public sealed class DiscordPresence : IDisposable
             details = st.State == "PREGAME"
                 ? $"{(ru ? "Выбор агента" : "Agent select")} — {st.Mode}"
                 : Join(st.Mode, score) ?? st.Mode;
-            stateLine = Join(name, me?.Agent?.Name, party);
+            stateLine = Join(name, st.Agent?.Name, party);
         }
 
-        var large = Image(images.Large, state, content);
-        var small = Image(images.Small, state, content);
+        var large = Image(images.Large, state, content, lobby);
+        var small = Image(images.Small, state, content, lobby);
 
         var presence = new RichPresence
         {
@@ -93,14 +93,16 @@ public sealed class DiscordPresence : IDisposable
         return presence;
     }
 
-    private static (string Url, string? Text)? Image(string kind, UiState state, GameContent content)
+    // "agent" in a match is the current agent only; in the lobby it is the last played one.
+    private static (string Url, string? Text)? Image(string kind, UiState state, GameContent content, bool lobby)
     {
         var me = state.Me;
+        var agent = lobby ? me?.Agent : state.Status?.Agent;
         var map = state.Match?.Map;
         (string? Url, string? Text) img = kind switch
         {
             "map" => (map?.Splash, map?.Name),
-            "agent" => (me?.Agent?.Icon, me?.Agent?.Name),
+            "agent" => (agent?.Icon, agent?.Name),
             "rank" => (me?.Rank?.Icon, me?.Rank?.Name),
             "card" => (me?.CardSmall, me == null ? null : $"{me.Name}#{me.Tag}"),
             "logo" => (content.ValorantLogo, "VALORANT"),

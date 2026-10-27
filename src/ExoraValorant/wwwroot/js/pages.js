@@ -258,7 +258,7 @@ function rpcLines(state, settings, mode) {
   if (mode === "lobby") {
     return { details: `${t("rpc.lobby")} — ${modeName}`, state: [name, party].filter(Boolean).join(" • ") };
   }
-  const agent = me.agent ? me.agent.name : null;
+  const agent = st.agent ? st.agent.name : null;
   const sc = st.score || m.score;
   const score = r.showScore && sc ? `${sc.ally} – ${sc.enemy}` : null;
   return {
@@ -267,12 +267,14 @@ function rpcLines(state, settings, mode) {
   };
 }
 
-function rpcImage(state, kind) {
+function rpcImage(state, kind, mode) {
   const me = state.me || {};
   const m = state.match || {};
+  // Same rule as DiscordPresence.cs: current agent in a match, last played agent in the lobby.
+  const agent = mode === "lobby" ? me.agent : state.status && state.status.agent;
   switch (kind) {
     case "map": return { url: m.map && m.map.splash, ph: initials(m.map && m.map.name) };
-    case "agent": return { url: me.agent && me.agent.icon, ph: initials(me.agent && me.agent.name) };
+    case "agent": return { url: agent && agent.icon, ph: initials(agent && agent.name) };
     case "rank": return { url: me.rank && me.rank.icon, ph: "R" };
     case "card": return { url: me.cardSmall || me.card, ph: "" };
     case "logo": return { url: null, ph: `<svg viewBox="0 0 24 24" width="60%" fill="#FF4655"><path d="M2 5l9.5 12h-5L2 11.3zm20 0v6.3L19.6 14h-5.1z"/></svg>`, logo: true };
@@ -283,8 +285,8 @@ function rpcImage(state, kind) {
 function discordCard(state, settings, mode) {
   const r = settings.rpc;
   const conf = mode === "lobby" ? r.lobby : r.game;
-  const large = rpcImage(state, conf.large);
-  const small = rpcImage(state, conf.small);
+  const large = rpcImage(state, conf.large, mode);
+  const small = rpcImage(state, conf.small, mode);
   const lines = rpcLines(state, settings, mode);
   const since = state.status && state.status.since ? Date.now() - state.status.since : 3 * 60e3;
   const showTimer = r.showTimer && mode === "game";
