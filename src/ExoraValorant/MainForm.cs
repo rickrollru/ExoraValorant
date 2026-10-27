@@ -194,6 +194,9 @@ public sealed class MainForm : Form
             case "openUrl":
                 OpenUrl(msg["url"]?.GetValue<string>());
                 break;
+            case "openMatch":
+                _ = OpenMatchAsync(msg["id"]?.GetValue<string>());
+                break;
             case "playerStats":
                 _watcher.RequestPlayerStats(msg["puuid"]?.GetValue<string>() ?? "");
                 break;
@@ -292,6 +295,23 @@ public sealed class MainForm : Form
             if (_ready) _web.CoreWebView2?.PostWebMessageAsJson(json);
             _discord.Update(state, _settings, _watcher.Content);
         });
+    }
+
+    private async Task OpenMatchAsync(string? id)
+    {
+        if (string.IsNullOrEmpty(id)) return;
+        HistoryMatchDto? match = null;
+        try
+        {
+            match = await _watcher.GetHistoryMatchAsync(id);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.Warn("Failed to load match " + id + ": " + ex.Message);
+        }
+        if (IsDisposed) return;
+        // null tells the page the match couldn't be loaded.
+        _web.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "history", id, data = match }, AppInfo.Json));
     }
 
     private async Task LoadNewsAsync()

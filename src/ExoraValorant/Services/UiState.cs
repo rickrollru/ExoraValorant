@@ -31,7 +31,7 @@ public sealed record PartyDto(int Size, int Max);
 // Agent = the agent in the current match (locked in agent select); null in the lobby or while unknown.
 public sealed record StatusDto(string State, string Mode, string Queue, PartyDto Party, ScoreDto? Score, long Since, AgentDto? Agent);
 
-public sealed record RecentDto(string Result, AgentDto? Agent, string Map, string Mode, string Score, string Kda);
+public sealed record RecentDto(string Id, string Result, AgentDto? Agent, string Map, string Mode, string Score, string Kda);
 
 public sealed record MeDto
 {
@@ -89,5 +89,42 @@ public sealed record MatchDto
 }
 
 public sealed record FriendDto(string Name, string Tag, string Status, string Mode, RankDto? Rank, string? Card, string? Avatar);
+
+public sealed record HistoryPlayerDto
+{
+    public string Puuid { get; init; } = "";
+    public string Name { get; init; } = "";
+    public string Tag { get; init; } = "";
+    public bool Hidden { get; init; }
+    public bool IsMe { get; init; }
+    public string Team { get; init; } = "";
+    public AgentDto? Agent { get; init; }
+    public RankDto? Rank { get; init; }
+    public int Level { get; init; }
+    public string? Title { get; init; }
+    public string? Card { get; init; }
+    public int Kills { get; init; }
+    public int Deaths { get; init; }
+    public int Assists { get; init; }
+    public int Acs { get; init; }
+    public int Adr { get; init; }
+    public int? Hs { get; init; }
+    public int? Party { get; init; }
+}
+
+public sealed record HistoryMatchDto
+{
+    public string Id { get; init; } = "";
+    public MapDto? Map { get; init; }
+    public string Mode { get; init; } = "";
+    public long Started { get; init; }
+    public long Length { get; init; }
+    public string Result { get; init; } = "";
+    public ScoreDto? Score { get; init; }
+    public int? Placement { get; init; }
+    public bool Single { get; init; }
+    public List<HistoryPlayerDto> Allies { get; init; } = [];
+    public List<HistoryPlayerDto> Enemies { get; init; } = [];
+}
 
 public sealed record NewsDto(string Date, string Title, string Text, string Url);

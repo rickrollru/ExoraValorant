@@ -29,6 +29,7 @@ public sealed class GameWatcher : IDisposable
     private readonly ConcurrentDictionary<string, MatchSummary> _recentCache = new();
     private readonly ConcurrentDictionary<string, bool> _statsRequested = new();
     private readonly FriendCards _friendCards = new();
+    private readonly MatchHistory _history;
     private string _contentLang = "";
 
     private string? _lastLoopState;
@@ -61,6 +62,7 @@ public sealed class GameWatcher : IDisposable
     {
         _settings = settings;
         _stats = new PlayerStats(_riot, _content);
+        _history = new MatchHistory(_content, _stats);
     }
 
     public void Start() => _loop ??= Task.Run(() => RunAsync(_cts.Token));
@@ -317,7 +319,7 @@ public sealed class GameWatcher : IDisposable
             var agent = _content.Agent(summary.AgentId);
             var agentDto = agent == null ? null : new AgentDto(agent.Name, agent.Icon);
             lastAgent ??= agentDto;
-            list.Add(new RecentDto(summary.Result, agentDto, _content.MapByUrl(summary.MapId)?.Name ?? "",
+            list.Add(new RecentDto(id, summary.Result, agentDto, _content.MapByUrl(summary.MapId)?.Name ?? "",
                 _content.QueueName(summary.QueueId, summary.Custom), summary.Score, summary.Kda));
         }
         return (list, lastAgent);
@@ -577,6 +579,9 @@ public sealed class GameWatcher : IDisposable
             }
         }, ct);
     }
+
+    public Task<HistoryMatchDto?> GetHistoryMatchAsync(string matchId) =>
+        _riot.IsConnected ? _history.GetAsync(matchId, _riot.Puuid, _cts.Token) : Task.FromResult<HistoryMatchDto?>(null);
 
     public void RequestPlayerStats(string puuid)
     {

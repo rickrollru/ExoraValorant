@@ -18,6 +18,7 @@ const PAGES = [
   { id: "friends", icon: "users", render: renderFriends },
   { id: "rpc", icon: "discord", render: renderRpc },
   { id: "settings", icon: "settings", render: renderSettings, bottom: true },
+  { id: "history", render: renderHistory, hidden: true },
 ];
 
 let STATE = host ? { connection: "connecting" } : MOCK.state;
@@ -33,11 +34,13 @@ function navLabel(id) {
 
 function renderNav() {
   const inMatch = STATE.match ? `<span class="nav-badge">${STATE.match.state === "PREGAME" ? "•" : "LIVE"}</span>` : "";
-  const item = (p) => `<button class="nav-item${UI.page === p.id ? " on" : ""}" data-page="${p.id}">${icon(p.icon)}<span>${navLabel(p.id)}</span>${p.id === "match" ? inMatch : ""}</button>`;
+  // A finished match is opened from Home, so Home stays highlighted.
+  const current = UI.page === "history" ? "home" : UI.page;
+  const item = (p) => `<button class="nav-item${current === p.id ? " on" : ""}" data-page="${p.id}">${icon(p.icon)}<span>${navLabel(p.id)}</span>${p.id === "match" ? inMatch : ""}</button>`;
   const nav = document.getElementById("nav");
   const next = nav.cloneNode(false);
   next.innerHTML = `<span class="nav-pill"></span>` +
-    PAGES.filter((p) => !p.bottom).map(item).join("") + `<div class="nav-sep"></div>` + PAGES.filter((p) => p.bottom).map(item).join("");
+    PAGES.filter((p) => !p.bottom && !p.hidden).map(item).join("") + `<div class="nav-sep"></div>` + PAGES.filter((p) => p.bottom).map(item).join("");
   morph(nav, next);
   layoutNav();
 }
@@ -107,7 +110,7 @@ function renderPage(animate = true) {
     const el = $content.querySelector(`[data-player="${CSS.escape(id)}"]`);
     if (el) el.classList.add("open");
   });
-  document.getElementById("titlebar-title").textContent = page.id === "home" ? "" : navLabel(page.id);
+  document.getElementById("titlebar-title").textContent = page.id === "home" ? "" : page.id === "history" ? t("history.title") : navLabel(page.id);
   layoutSegs($content);
   fitNames($content);
 }
@@ -119,11 +122,18 @@ function renderAll(animate) {
 }
 
 function go(page) {
-  if (UI.page === page) return;
+  if (UI.page === page && page !== "history") return;
   UI.page = page;
   renderNav();
   renderPage(true);
   $content.scrollTop = 0;
+}
+
+function openMatch(id) {
+  UI.history = { id, loading: true };
+  go("history");
+  if (host) send("openMatch", { id });
+  else setTimeout(() => { UI.history = { id, data: MOCK.history(id) }; renderPage(true); }, 300);
 }
 
 // ---------- Settings ----------
@@ -197,6 +207,9 @@ document.addEventListener("click", (e) => {
 
   const sw = e.target.closest("[data-accent]");
   if (sw) return updateSetting("accent", sw.dataset.accent);
+
+  const recent = e.target.closest("[data-match]");
+  if (recent) return openMatch(recent.dataset.match);
 
   const player = e.target.closest("[data-player]");
   if (player) {
@@ -351,6 +364,12 @@ if (host) {
         break;
       case "window":
         document.body.classList.toggle("maximized", !!msg.maximized);
+        break;
+      case "history":
+        if (UI.history && UI.history.id === msg.id) {
+          UI.history = { id: msg.id, data: msg.data };
+          if (UI.page === "history") renderPage(true);
+        }
         break;
       case "toast":
         toast(msg.title, msg.text, msg.kind);

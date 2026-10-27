@@ -53,11 +53,11 @@ const MOCK = (() => {
       rank: rank(21), rr: 47, peak: { ...rank(22), act: "E9 A2" }, wr: 56, games: 48,
       agent: A.jett,
       recent: [
-        { result: "L", agent: A.jett, map: "Ascent", mode: "Competitive", score: "9–13", kda: "14/17/5" },
-        { result: "W", agent: A.fade, map: "Lotus", mode: "Competitive", score: "13–7", kda: "21/12/9" },
-        { result: "W", agent: A.jett, map: "Bind", mode: "Unrated", score: "13–10", kda: "19/15/4" },
-        { result: "W", agent: A.sova, map: "Sunset", mode: "Competitive", score: "13–11", kda: "16/14/11" },
-        { result: "L", agent: A.jett, map: "Haven", mode: "Swiftplay", score: "3–5", kda: "6/8/2" },
+        { id: "m1", result: "L", agent: A.jett, map: "Ascent", mode: "Competitive", score: "9–13", kda: "14/17/5" },
+        { id: "m2", result: "W", agent: A.fade, map: "Lotus", mode: "Competitive", score: "13–7", kda: "21/12/9" },
+        { id: "m3", result: "W", agent: A.jett, map: "Bind", mode: "Unrated", score: "13–10", kda: "19/15/4" },
+        { id: "m4", result: "W", agent: A.sova, map: "Sunset", mode: "Competitive", score: "13–11", kda: "16/14/11" },
+        { id: "m5", result: "L", agent: A.jett, map: "Haven", mode: "Swiftplay", score: "3–5", kda: "6/8/2" },
       ],
     },
     match: { map, mode: "Swiftplay", state: "INGAME", score: { ally: 2, enemy: 1 }, allies, enemies, single: false },
@@ -84,5 +84,19 @@ const MOCK = (() => {
     { date: "2026-08-26", title: "Patch Notes 13.04", text: "New act, battle pass and competitive updates.", url: "https://playvalorant.com/news/tags/patch-notes/" },
   ];
 
-  return { state, news };
+  // Scoreboard of a finished match, built from the live demo match with made-up numbers.
+  const history = (id) => {
+    const row = (p, i) => ({
+      ...p, kills: 24 - i * 3, deaths: 12 + (i % 4), assists: 3 + ((i * 5) % 7),
+      acs: 290 - i * 22, adr: 180 - i * 13, hs: 18 + ((i * 7) % 15), level: p.level || 120,
+    });
+    const recent = state.me.recent.find((r) => r.id === id) || state.me.recent[0];
+    return {
+      id, map, mode: recent.mode, started: Date.now() - 86e6, length: 38 * 60e3, result: recent.result,
+      score: { ally: 13, enemy: 9 }, single: false,
+      allies: allies.map(row), enemies: enemies.map((p, i) => row(p, i + 1)),
+    };
+  };
+
+  return { state, news, history };
 })();

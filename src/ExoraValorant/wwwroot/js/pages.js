@@ -69,10 +69,71 @@ function homeProfile(state, me) {
 }
 
 function recentRow(m) {
-  return `<div class="recent-row ${m.result}">
+  return `<div class="recent-row ${m.result}${m.id ? " clickable" : ""}"${m.id ? ` data-match="${esc(m.id)}"` : ""}>
     ${img(m.agent && m.agent.icon, "avatar", initials(m.agent && m.agent.name))}
     <div class="what"><b>${esc(m.map)}</b><small>${esc(m.mode)}${m.kda ? " · " + esc(m.kda) : ""}</small></div>
     <div class="score">${esc(m.score)}</div>
+    ${m.id ? icon("chevron", "go") : ""}
+  </div>`;
+}
+
+// ---------- Finished match (opened from Recent matches) ----------
+
+function renderHistory(state, settings, ui) {
+  const h = ui.history || {};
+  const back = `<div class="history-top"><button class="btn" data-page="home">${icon("chevron", "back")}${t("history.back")}</button></div>`;
+  if (h.loading) return `<div class="page">${back}${emptyState("refresh", t("history.loading"), "")}</div>`;
+  const m = h.data;
+  if (!m) return `<div class="page">${back}${emptyState("crosshair", t("history.error"), "")}</div>`;
+
+  const parties = partyColors(m);
+  const result = { W: ["win", t("history.win")], L: ["loss", t("history.loss")], D: ["", t("history.draw")] }[m.result] || ["", ""];
+  const date = m.started ? new Date(m.started).toLocaleString(LANG === "ru" ? "ru-RU" : "en-US", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) : "";
+  const minutes = m.length ? Math.round(m.length / 60000) : 0;
+  const score = m.score
+    ? `<div class="match-score"><span class="a">${m.score.ally}</span> – <span class="e">${m.score.enemy}</span></div>`
+    : m.placement ? `<div class="match-score">${t("history.place", { n: m.placement })}</div>` : "";
+
+  const team = (side, title, players) => `<div class="card team ${side}">
+      <div class="team-title"><span class="dot"></span>${esc(title)}</div>
+      <div class="hrow hhead"><span>${t("history.player")}</span><span>${t("history.rank")}</span><span>${t("history.kda")}</span><span>ACS</span><span>ADR</span><span>HS%</span></div>
+      <div class="players">${groupByParty(players, parties).map((g) => g.color
+        ? `<div class="party-group" style="--party:${g.color}"><span class="party-label">${icon("link")}${t("match.partyOf", { n: g.players.length })}</span>${g.players.map((p) => historyRow(p, settings)).join("")}</div>`
+        : historyRow(g.players[0], settings)).join("")}</div>
+    </div>`;
+
+  return `<div class="page history">
+    ${back}
+    <div class="match-head">
+      <div class="match-map">${esc(m.map ? m.map.name : "")}</div>
+      ${score}
+      <div class="match-meta">
+        <span class="badge ${result[0]}">${esc(result[1])}</span>
+        <span class="badge">${esc(m.mode)}</span>
+        ${date ? `<span class="badge">${esc(date)}</span>` : ""}
+        ${minutes ? `<span class="badge">${t("history.min", { n: minutes })}</span>` : ""}
+      </div>
+    </div>
+    <div class="teams stack">
+      ${m.single ? team("ally", t("match.players"), m.allies) : team("ally", t("match.ally"), m.allies) + team("enemy", t("match.enemy"), m.enemies)}
+    </div>
+  </div>`;
+}
+
+function historyRow(p, settings) {
+  return `<div class="player hist${p.isMe ? " me" : ""}">
+    ${img(p.card, "card-bg", "")}
+    <div class="hrow">
+      <div class="hwho">
+        ${img(p.agent && p.agent.icon, "avatar", initials(p.agent && p.agent.name))}
+        <div class="who">${nameHtml(p, settings.streamerMode)}${p.title ? `<div class="ptitle">${esc(p.title)}</div>` : ""}</div>
+      </div>
+      <span title="${esc(p.rank ? p.rank.name : "")}">${rankImg(p.rank)}</span>
+      <b class="num">${p.kills}/${p.deaths}/${p.assists}</b>
+      <b class="num">${p.acs}</b>
+      <b class="num">${p.adr}</b>
+      <b class="num">${p.hs == null ? "—" : p.hs + "%"}</b>
+    </div>
   </div>`;
 }
 

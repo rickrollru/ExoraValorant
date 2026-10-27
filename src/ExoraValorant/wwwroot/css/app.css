@@ -395,6 +395,33 @@ svg { flex-shrink: 0; }
 .fit-name.too-long { visibility: hidden; width: 0; }
 .player-extra .stat .rank-img { width: 20px; height: 20px; }
 
+/* ---------- Finished match ---------- */
+.recent-row.clickable { cursor: pointer; }
+.recent-row .go { width: 16px; height: 16px; color: var(--text-muted); transform: rotate(-90deg); margin-left: -4px;
+  transition: transform var(--t-ctrl) var(--ease), color var(--t-hover); }
+.recent-row.clickable:hover .go { color: var(--text); transform: rotate(-90deg) translateY(2px); }
+.history-top { margin: 4px 0 6px; }
+.history-top .back { width: 16px; height: 16px; transform: rotate(90deg); }
+.teams.stack { grid-template-columns: minmax(0, 1fr); max-width: 980px; margin: 0 auto; }
+.hrow { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 44px 78px 48px 48px 48px; align-items: center; gap: 8px; }
+.hhead { padding: 0 12px 6px; font-size: 11px; font-weight: 700; color: var(--text-muted); }
+.hhead span:not(:first-child), .player.hist .hrow > :not(.hwho) { text-align: center; justify-self: center; }
+.player.hist { cursor: default; }
+.player.hist .hrow { padding: 8px 12px; min-height: 56px; }
+.player.hist .hwho { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.player.hist b { font-size: 13px; }
+.player.hist .rank-img { width: 30px; height: 30px; }
+/* Rows inside a party frame keep the full width, so their columns line up with the header. */
+.teams.stack .party-group { padding: 14px 0 0; }
+/* Narrow window: drop ADR and tighten the columns so names keep some room. */
+@media (max-width: 900px) {
+  .hrow { grid-template-columns: minmax(0, 1fr) 32px 68px 40px 40px; gap: 6px; }
+  .hrow > :nth-child(5) { display: none; }
+  .player.hist .hwho { gap: 8px; }
+  .player.hist .avatar { width: 34px; height: 34px; }
+  .player.hist .rank-img { width: 26px; height: 26px; }
+}
+
 /* ---------- Friends ---------- */
 .friends { max-width: 760px; margin: 0 auto; }
 .friends-tools { display: flex; gap: 10px; margin-bottom: 12px; }
