@@ -276,7 +276,11 @@ svg { flex-shrink: 0; }
 .empty p { margin: 0 auto; max-width: 360px; line-height: 1.5; }
 
 /* ---------- Home ---------- */
-.home { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr); gap: 14px; align-items: start; }
+.home { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr); gap: 14px; align-items: stretch; }
+/* The news column is exactly as tall as the profile column; the list scrolls inside its card. */
+.home-col.side { position: relative; min-height: 320px; }
+.home-col.side > .card { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.home-col.side .news { flex: 1; min-height: 0; max-height: none; }
 .home-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .hero { padding: 0; overflow: hidden; }
 .hero-art { position: relative; height: 210px; }
@@ -396,7 +400,11 @@ svg { flex-shrink: 0; }
 .player-extra .stat .rank-img { width: 20px; height: 20px; }
 
 /* ---------- Finished match ---------- */
-.recent-row.clickable { cursor: pointer; }
+.recent-row.clickable, .friend.clickable { cursor: pointer; }
+.friend .go { width: 16px; height: 16px; color: var(--text-muted); transform: rotate(-90deg); flex-shrink: 0;
+  transition: transform var(--t-ctrl) var(--ease), color var(--t-hover); }
+.friend.clickable:hover .go { color: var(--text); transform: rotate(-90deg) translateY(2px); }
+.profile { display: flex; flex-direction: column; gap: 14px; max-width: 760px; margin: 0 auto; }
 .recent-row .go { width: 16px; height: 16px; color: var(--text-muted); transform: rotate(-90deg); margin-left: -4px;
   transition: transform var(--t-ctrl) var(--ease), color var(--t-hover); }
 .recent-row.clickable:hover .go { color: var(--text); transform: rotate(-90deg) translateY(2px); }
@@ -407,6 +415,9 @@ svg { flex-shrink: 0; }
 .hhead { padding: 0 12px 6px; font-size: 11px; font-weight: 700; color: var(--text-muted); }
 .hhead span:not(:first-child), .player.hist .hrow > :not(.hwho) { text-align: center; justify-self: center; }
 .player.hist { cursor: default; }
+.player.hist[data-hist] { cursor: pointer; }
+.hist-extra { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hist-extra .stat, .hist-extra .stat.wide { grid-column: auto; }
 .player.hist .hrow { padding: 8px 12px; min-height: 56px; }
 .player.hist .hwho { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .player.hist b { font-size: 13px; }
@@ -507,7 +518,9 @@ body.maximized .resize { display: none; }
 @media (max-width: 1080px) {
   .home, .rpc { grid-template-columns: minmax(0, 1fr); }
   .rpc-preview { position: static; }
-  .news { max-height: none; }
+  .home-col.side { min-height: 0; }
+  .home-col.side > .card { position: static; }
+  .home-col.side .news { max-height: 560px; }
 }
 @media (max-width: 980px) {
   .teams, .settings { grid-template-columns: minmax(0, 1fr); }

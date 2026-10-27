@@ -88,7 +88,7 @@ public sealed record MatchDto
     public bool Single { get; init; }
 }
 
-public sealed record FriendDto(string Name, string Tag, string Status, string Mode, RankDto? Rank, string? Card, string? Avatar);
+public sealed record FriendDto(string Puuid, string Name, string Tag, string Status, string Mode, RankDto? Rank, string? Card, string? Avatar);
 
 public sealed record HistoryPlayerDto
 {
@@ -110,7 +110,30 @@ public sealed record HistoryPlayerDto
     public int Adr { get; init; }
     public int? Hs { get; init; }
     public int? Party { get; init; }
+    public HistoryDetailsDto? Details { get; init; }
 }
+
+// Shown when a player's row of a finished match is opened.
+public sealed record HistoryDetailsDto
+{
+    public int FirstKills { get; init; }
+    public int FirstDeaths { get; init; }
+    public int Kast { get; init; }
+    public int Plants { get; init; }
+    public int Defuses { get; init; }
+    public int Multi3 { get; init; }
+    public int Multi4 { get; init; }
+    public int Multi5 { get; init; }
+    public int? Loadout { get; init; }
+    public int Damage { get; init; }
+    public int Received { get; init; }
+    public int Head { get; init; }
+    public int Body { get; init; }
+    public int Leg { get; init; }
+    public CastsDto? Casts { get; init; }
+}
+
+public sealed record CastsDto(int C, int Q, int E, int X);
 
 public sealed record HistoryMatchDto
 {

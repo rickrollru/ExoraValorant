@@ -62,15 +62,15 @@ const MOCK = (() => {
     },
     match: { map, mode: "Swiftplay", state: "INGAME", score: { ally: 2, enemy: 1 }, allies, enemies, single: false },
     friends: [
-      { name: "TRAUMADAS LOVER", tag: "Cul0n", status: "ingame", mode: "Swiftplay", rank: rank(16), card: card("33c1f011-4eca-068c-9751-f68c788b2eee"), avatar: `${media}/playercards/33c1f011-4eca-068c-9751-f68c788b2eee/smallart.png` },
-      { name: "TP Jayko シ", tag: "bot", status: "ingame", mode: "Competitive", rank: rank(19), card: card("bb6ae873-43ec-efb4-3ea6-93ac00a82d4e") },
-      { name: "noteminimal66", tag: "2134q", status: "pregame", mode: "Swiftplay", rank: rank(9), card: card("7fdbe3ef-4fd8-a5a6-0ab2-0ab06da7caa9") },
-      { name: "cosmo", tag: "김채원", status: "ingame", mode: "", rank: rank(21), card: card("30b64514-440d-1261-f863-6bbb180263f9") },
-      { name: "Koke GS", tag: "KOKE", status: "menus", mode: "Competitive", rank: rank(19), card: card("bb6ae873-43ec-efb4-3ea6-93ac00a82d4e") },
-      { name: "AleSuw", tag: "Niza", status: "ingame", mode: "Swiftplay", rank: rank(0), card: card("9fb348bc-41a0-91ad-8a3e-818035c4e561") },
-      { name: "yepa2836", tag: "LAN", status: "menus", mode: "Competitive", rank: rank(21), card: card("33c1f011-4eca-068c-9751-f68c788b2eee") },
-      { name: "midnight", tag: "0001", status: "offline", mode: "", rank: rank(12), card: null },
-      { name: "kuro", tag: "neko", status: "offline", mode: "", rank: null, card: null },
+      { puuid: "f1", name:"TRAUMADAS LOVER", tag: "Cul0n", status: "ingame", mode: "Swiftplay", rank: rank(16), card: card("33c1f011-4eca-068c-9751-f68c788b2eee"), avatar: `${media}/playercards/33c1f011-4eca-068c-9751-f68c788b2eee/smallart.png` },
+      { puuid: "f2", name:"TP Jayko シ", tag: "bot", status: "ingame", mode: "Competitive", rank: rank(19), card: card("bb6ae873-43ec-efb4-3ea6-93ac00a82d4e") },
+      { puuid: "f3", name:"noteminimal66", tag: "2134q", status: "pregame", mode: "Swiftplay", rank: rank(9), card: card("7fdbe3ef-4fd8-a5a6-0ab2-0ab06da7caa9") },
+      { puuid: "f4", name:"cosmo", tag: "김채원", status: "ingame", mode: "", rank: rank(21), card: card("30b64514-440d-1261-f863-6bbb180263f9") },
+      { puuid: "f5", name:"Koke GS", tag: "KOKE", status: "menus", mode: "Competitive", rank: rank(19), card: card("bb6ae873-43ec-efb4-3ea6-93ac00a82d4e") },
+      { puuid: "f6", name:"AleSuw", tag: "Niza", status: "ingame", mode: "Swiftplay", rank: rank(0), card: card("9fb348bc-41a0-91ad-8a3e-818035c4e561") },
+      { puuid: "f7", name:"yepa2836", tag: "LAN", status: "menus", mode: "Competitive", rank: rank(21), card: card("33c1f011-4eca-068c-9751-f68c788b2eee") },
+      { puuid: "f8", name:"midnight", tag: "0001", status: "offline", mode: "", rank: rank(12), card: null },
+      { puuid: "f9", name:"kuro", tag: "neko", status: "offline", mode: "", rank: null, card: null },
     ],
     discord: { connected: true },
     valorantRunning: true,
@@ -89,6 +89,9 @@ const MOCK = (() => {
     const row = (p, i) => ({
       ...p, kills: 24 - i * 3, deaths: 12 + (i % 4), assists: 3 + ((i * 5) % 7),
       acs: 290 - i * 22, adr: 180 - i * 13, hs: 18 + ((i * 7) % 15), level: p.level || 120,
+      details: { firstKills: 4 - (i % 4), firstDeaths: 1 + (i % 3), kast: 78 - i * 3, plants: i % 3, defuses: i % 2,
+        multi3: i % 2, multi4: i === 0 ? 1 : 0, multi5: 0, loadout: 3900 - i * 120, damage: 3960 - i * 280, received: 2900 + i * 90,
+        head: 18 + ((i * 7) % 15), body: 70 - ((i * 7) % 15), leg: 12, casts: { c: 6, q: 9 - (i % 3), e: 14, x: 2 } },
     });
     const recent = state.me.recent.find((r) => r.id === id) || state.me.recent[0];
     return {
@@ -98,5 +101,11 @@ const MOCK = (() => {
     };
   };
 
-  return { state, news, history };
+  const profile = (puuid) => {
+    const f = state.friends.find((x) => x.puuid === puuid) || state.friends[0];
+    return { ...state.me, name: f.name, tag: f.tag, title: "", card: f.card, rank: f.rank || rank(0), level: 0,
+      recent: state.me.recent.map((r, i) => ({ ...r, id: r.id + puuid, result: i % 2 ? "W" : "L" })) };
+  };
+
+  return { state, news, history, profile };
 })();

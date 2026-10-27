@@ -53,11 +53,16 @@ When a match is found, Exora switches from Home to this page by itself.
 - Profile banner with your player card, title, rank and last agent.
 - Rank, peak with act, win rate and level.
 - Last 5 matches: win / loss, agent, map, mode, K/D/A and score (placement in deathmatch).
+- **Open any of them** for the full scoreboard: rank, K/D/A, ACS, ADR and HS% of every player, exact parties.
+  Click a player for first kills / deaths, KAST, spike plants and defuses, multi-kills, loadout, damage dealt
+  and taken, head / body / leg hits and ability casts.
+- While Valorant is closed, Home shows the last account you played on.
 - Latest Valorant patch notes.
 
 ### 👥 Friends
 - Who is in game, in agent select or in the lobby, with mode and rank.
-- Ranks of offline friends; player cards are remembered as avatars.
+- Ranks of offline friends; player cards are used as avatars.
+- **Open a friend** to see their rank, peak, win rate and last matches, and open those matches from their side.
 - Search by name.
 
 ### 🎮 Discord RPC

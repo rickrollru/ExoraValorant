@@ -25,22 +25,36 @@ public sealed class FriendCards
         }
     }
 
-    public string? Get(string puuid) => _cards.TryGetValue(puuid, out var id) ? id : null;
+    // Used from the polling loop and from background downloads.
+    private readonly object _gate = new();
+
+    public string? Get(string puuid)
+    {
+        lock (_gate) return _cards.TryGetValue(puuid, out var id) ? id : null;
+    }
 
     public void Remember(string puuid, string cardId)
     {
-        if (_cards.TryGetValue(puuid, out var old) && old == cardId) return;
-        _cards[puuid] = cardId;
-        _dirty = true;
+        lock (_gate)
+        {
+            if (_cards.TryGetValue(puuid, out var old) && old == cardId) return;
+            _cards[puuid] = cardId;
+            _dirty = true;
+        }
     }
 
     public void Save()
     {
-        if (!_dirty) return;
-        _dirty = false;
+        string json;
+        lock (_gate)
+        {
+            if (!_dirty) return;
+            _dirty = false;
+            json = JsonSerializer.Serialize(_cards);
+        }
         try
         {
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(_cards));
+            File.WriteAllText(FilePath, json);
         }
         catch (Exception ex)
         {

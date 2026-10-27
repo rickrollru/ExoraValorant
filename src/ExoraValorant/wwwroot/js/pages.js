@@ -22,7 +22,7 @@ function renderHome(state, settings, news) {
 
   return `<div class="page home">
     <div class="home-col">${left}</div>
-    <div class="home-col">
+    <div class="home-col side">
       <div class="card">
         <div class="eyebrow">${t("home.news")}</div>
         <div class="title" style="font-size:19px;margin:2px 0 14px">${t("home.newsTitle")}</div>
@@ -34,13 +34,16 @@ function renderHome(state, settings, news) {
 
 function homeProfile(state, me) {
   const live = state.status && state.status.state;
+  // While Valorant is closed Home shows the last account played on; its matches can't be opened then.
+  const saved = state.connection && state.connection !== "ok";
+  if (saved) me = { ...me, recent: (me.recent || []).map((r) => ({ ...r, id: null })) };
   const recent = me.recent || [];
   const wr = me.wr == null ? "—" : me.wr + "%";
   return `
     <div class="card hero">
       <div class="hero-art">
         ${img(me.card, "", "")}
-        ${live ? `<span class="badge win hero-live">● ${t("home.live")}</span>` : ""}
+        ${live ? `<span class="badge win hero-live">● ${t("home.live")}</span>` : saved ? `<span class="badge hero-live">${t("home.lastAccount")}</span>` : ""}
         <div class="hero-id">
           ${rankImg(me.rank)}
           <div class="who">
@@ -81,7 +84,7 @@ function recentRow(m) {
 
 function renderHistory(state, settings, ui) {
   const h = ui.history || {};
-  const back = `<div class="history-top"><button class="btn" data-page="home">${icon("chevron", "back")}${t("history.back")}</button></div>`;
+  const back = backButton(ui.historyFrom || "home");
   if (h.loading) return `<div class="page">${back}${emptyState("refresh", t("history.loading"), "")}</div>`;
   const m = h.data;
   if (!m) return `<div class="page">${back}${emptyState("crosshair", t("history.error"), "")}</div>`;
@@ -120,8 +123,25 @@ function renderHistory(state, settings, ui) {
   </div>`;
 }
 
+function backButton(page) {
+  return `<div class="history-top"><button class="btn" data-page="${page}">${icon("chevron", "back")}${t("history.back")}</button></div>`;
+}
+
+// ---------- Friend profile (opened from Friends) ----------
+
+function renderProfile(state, settings, ui) {
+  const pr = ui.profile || {};
+  const back = backButton("friends");
+  if (pr.loading) return `<div class="page">${back}${emptyState("refresh", t("profile.loading"), "")}</div>`;
+  if (!pr.data) return `<div class="page">${back}${emptyState("users", t("profile.error"), "")}</div>`;
+  const friend = (state.friends || []).find((f) => f.puuid === pr.puuid);
+  const online = friend && friend.status !== "offline";
+  return `<div class="page">${back}<div class="profile">${homeProfile({ status: online ? { state: friend.status } : null }, pr.data)}</div></div>`;
+}
+
 function historyRow(p, settings) {
-  return `<div class="player hist${p.isMe ? " me" : ""}">
+  const d = p.details;
+  return `<div class="player hist${p.isMe ? " me" : ""}"${d ? ` data-hist="${esc(p.puuid)}"` : ""}>
     ${img(p.card, "card-bg", "")}
     <div class="hrow">
       <div class="hwho">
@@ -134,7 +154,26 @@ function historyRow(p, settings) {
       <b class="num">${p.adr}</b>
       <b class="num">${p.hs == null ? "—" : p.hs + "%"}</b>
     </div>
+    ${d ? historyDetails(p, d) : ""}
   </div>`;
+}
+
+function historyDetails(p, d) {
+  const n = (v) => Number(v || 0).toLocaleString(LANG === "ru" ? "ru-RU" : "en-US");
+  const multi = [["3K", d.multi3], ["4K", d.multi4], ["5K", d.multi5]].filter(([, v]) => v > 0).map(([k, v]) => `${k}×${v}`).join(" ") || "—";
+  const casts = d.casts ? `C ${d.casts.c} · Q ${d.casts.q} · E ${d.casts.e} · X ${d.casts.x}` : "—";
+  const cell = (label, value, sub) => `<div class="stat"><small>${label}</small><b class="num">${value}</b>${sub ? `<span class="sub">${sub}</span>` : ""}</div>`;
+  return `<div class="player-extra"><div class="player-extra-in hist-extra">
+    <div class="stat"><small>${t("history.rank")}</small><b>${rankImg(p.rank)}<span class="fit-name" title="${esc(p.rank ? p.rank.name : "")}">${esc(p.rank ? p.rank.name : "—")}</span></b>${p.level ? `<span class="sub">${t("match.level", { n: p.level })}</span>` : ""}</div>
+    ${cell(t("history.firsts"), `${d.firstKills} / ${d.firstDeaths}`, t("history.firstsSub"))}
+    ${cell("KAST", d.kast + "%")}
+    ${cell(t("history.spike"), `${d.plants} / ${d.defuses}`, t("history.spikeSub"))}
+    ${cell(t("history.multi"), multi)}
+    ${cell(t("history.loadout"), d.loadout == null ? "—" : n(d.loadout))}
+    ${cell(t("history.damage"), `${n(d.damage)} / ${n(d.received)}`, t("history.damageSub"))}
+    ${cell(t("history.hits"), `${d.head} / ${d.body} / ${d.leg}%`, t("history.hitsSub"))}
+    ${cell(t("history.casts"), casts)}
+  </div></div>`;
 }
 
 // ---------- Match ----------
@@ -244,7 +283,7 @@ function renderFriends(state, settings, ui) {
   const list = (state.friends || []).filter((f) => !q || (f.name + "#" + f.tag).toLowerCase().includes(q));
   const online = list.filter((f) => f.status !== "offline");
   const offline = list.filter((f) => f.status === "offline");
-  const row = (f) => `<div class="friend ${f.status}">
+  const row = (f) => `<div class="friend ${f.status}${f.puuid ? " clickable" : ""}"${f.puuid ? ` data-friend="${esc(f.puuid)}"` : ""}>
       ${img(f.card, "card-bg", "")}
       ${img(f.avatar, "avatar", initials(f.name))}
       <div class="who">
@@ -252,6 +291,7 @@ function renderFriends(state, settings, ui) {
         <div class="status ${f.status}">${t("friends.status." + f.status)}${f.mode && f.status !== "offline" ? " — " + esc(f.mode) : ""}</div>
       </div>
       ${f.rank ? rankImg(f.rank) : ""}
+      ${f.puuid ? icon("chevron", "go") : ""}
     </div>`;
 
   return `<div class="page friends">

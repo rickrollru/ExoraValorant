@@ -30,6 +30,10 @@ public sealed class GameWatcher : IDisposable
     private readonly ConcurrentDictionary<string, bool> _statsRequested = new();
     private readonly FriendCards _friendCards = new();
     private readonly MatchHistory _history;
+    // The last account played on, shown while Valorant is closed.
+    private MeDto? _savedMe = LastAccount.Load();
+    private volatile HashSet<string> _friendPuuids = [];
+    private readonly HashSet<string> _avatarTried = [];
     private string _contentLang = "";
 
     private string? _lastLoopState;
@@ -63,6 +67,10 @@ public sealed class GameWatcher : IDisposable
         _settings = settings;
         _stats = new PlayerStats(_riot, _content);
         _history = new MatchHistory(_content, _stats);
+        _stats.CardSeen = (puuid, card) =>
+        {
+            if (_friendPuuids.Contains(puuid)) _friendCards.Remember(puuid, card);
+        };
     }
 
     public void Start() => _loop ??= Task.Run(() => RunAsync(_cts.Token));
@@ -89,7 +97,7 @@ public sealed class GameWatcher : IDisposable
                 if (_riot.IsConnected) Log.Info("Lost Riot client: " + ex.Message);
                 ResetSession();
                 var running = RiotClient.IsValorantRunning();
-                Publish(new UiState { Connection = running ? "connecting" : "none", ValorantRunning = running });
+                Publish(new UiState { Connection = running ? "connecting" : "none", ValorantRunning = running, Me = _savedMe });
             }
             catch (Exception ex)
             {
@@ -142,13 +150,13 @@ public sealed class GameWatcher : IDisposable
         if (!running)
         {
             if (_riot.IsConnected) ResetSession();
-            Publish(new UiState { Connection = "none" });
+            Publish(new UiState { Connection = "none", Me = _savedMe });
             return;
         }
 
         if (!_riot.IsConnected)
         {
-            Publish(new UiState { Connection = "connecting", ValorantRunning = true });
+            Publish(new UiState { Connection = "connecting", ValorantRunning = true, Me = _savedMe });
             await _riot.ConnectAsync(ct);
             await _content.LoadSeasonsAsync(_riot, ct);
         }
@@ -206,6 +214,11 @@ public sealed class GameWatcher : IDisposable
             _me = await BuildProfileAsync(mine, ct);
             _profileAt = DateTime.UtcNow;
             _profileDirty = false;
+            if (_me.Name != "")
+            {
+                _savedMe = _me;
+                LastAccount.Save(_me);
+            }
         }
         else if (mine != null)
         {
@@ -307,13 +320,14 @@ public sealed class GameWatcher : IDisposable
         {
             var id = h?["MatchID"]?.GetValue<string>();
             if (id == null) continue;
-            if (!_recentCache.TryGetValue(id, out var summary))
+            var key = id + ":" + puuid;
+            if (!_recentCache.TryGetValue(key, out var summary))
             {
                 var details = await _stats.GetMatchDetailsAsync(id, ct);
                 if (details == null) continue;
                 summary = SummarizeMatch(details, puuid);
                 if (summary == null) continue;
-                _recentCache[id] = summary;
+                _recentCache[key] = summary;
             }
 
             var agent = _content.Agent(summary.AgentId);
@@ -580,8 +594,50 @@ public sealed class GameWatcher : IDisposable
         }, ct);
     }
 
-    public Task<HistoryMatchDto?> GetHistoryMatchAsync(string matchId) =>
-        _riot.IsConnected ? _history.GetAsync(matchId, _riot.Puuid, _cts.Token) : Task.FromResult<HistoryMatchDto?>(null);
+    // perspective: whose match it is (their team is "your team"); our own by default.
+    public Task<HistoryMatchDto?> GetHistoryMatchAsync(string matchId, string? perspective = null) =>
+        _riot.IsConnected
+            ? _history.GetAsync(matchId, string.IsNullOrEmpty(perspective) ? _riot.Puuid : perspective, KnownName, _cts.Token)
+            : Task.FromResult<HistoryMatchDto?>(null);
+
+    // Names we may show in a finished match: ours and our friends'. Riot no longer includes names there.
+    private (string Name, string Tag)? KnownName(string puuid)
+    {
+        if (puuid == _riot.Puuid && _names.TryGetValue(puuid, out var me)) return me;
+        foreach (var f in _friendsList)
+            if (f?["puuid"]?.GetValue<string>() == puuid)
+                return (f["game_name"]?.GetValue<string>() ?? "", f["game_tag"]?.GetValue<string>() ?? "");
+        return null;
+    }
+
+    // Profile of another player (a friend): rank, peak, win rate and last matches. Loaded on demand.
+    public async Task<MeDto?> GetPlayerProfileAsync(string puuid)
+    {
+        if (!_riot.IsConnected || string.IsNullOrEmpty(puuid)) return null;
+        var ct = _cts.Token;
+        await ResolveNamesAsync([puuid], ct);
+        var (name, tag) = _names.TryGetValue(puuid, out var n) ? n : ("", "");
+        var rank = await _stats.GetRankAsync(puuid, ct);
+        var recent = await BuildRecentAsync(puuid, ct);
+        var presence = MyPresence?.Puuid == puuid ? MyPresence : _friendSeen.TryGetValue(puuid, out var seen) ? seen.Presence : null;
+        var cardId = presence?.PlayerCardId is { Length: > 0 } c ? c : _friendCards.Get(puuid);
+        return new MeDto
+        {
+            Name = name,
+            Tag = tag,
+            Title = _content.Title(presence?.PlayerTitleId),
+            Level = presence?.AccountLevel ?? 0,
+            Card = GameContent.CardWide(cardId),
+            CardSmall = GameContent.CardSmall(cardId),
+            Rank = Rank(rank.Tier),
+            Rr = rank.Rr,
+            Peak = Peak(rank),
+            Wr = rank.Wr,
+            Games = rank.Games,
+            Agent = recent.Agent,
+            Recent = recent.Matches,
+        };
+    }
 
     public void RequestPlayerStats(string puuid)
     {
@@ -656,23 +712,28 @@ public sealed class GameWatcher : IDisposable
             if (tier == null) withoutRank.Add(puuid);
 
             var status = !online ? "offline" : p!.SessionLoopState switch { "INGAME" => "ingame", "PREGAME" => "pregame", _ => "menus" };
-            list.Add(new FriendDto(name, tag, status,
+            list.Add(new FriendDto(puuid, name, tag, status,
                 online ? _content.QueueName(p!.QueueId, p.IsCustomGame) : "",
                 tier == null ? null : Rank(tier.Value),
                 GameContent.CardWide(cardId),
                 GameContent.CardSmall(cardId)));
         }
+        _friendPuuids = list.Select(f => f.Puuid).ToHashSet();
         _friendCards.Save();
-        StartFriendRanks(withoutRank);
+        List<string> withoutCard;
+        lock (_avatarTried) withoutCard = list.Where(f => f.Avatar == null && !_avatarTried.Contains(f.Puuid)).Select(f => f.Puuid).ToList();
+        StartFriendRanks(withoutRank, withoutCard);
 
         var order = new Dictionary<string, int> { ["ingame"] = 0, ["pregame"] = 1, ["menus"] = 2, ["offline"] = 3 };
         return list.OrderBy(f => order[f.Status]).ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     // Ranks of friends without a presence, loaded slowly in the background after the match players.
-    private void StartFriendRanks(List<string> puuids)
+    // Ranks of offline friends, then the avatars (player cards) of friends we have never seen online:
+    // one last-match download per friend, once; the card is remembered on disk from then on.
+    private void StartFriendRanks(List<string> puuids, List<string> withoutCard)
     {
-        if (puuids.Count == 0 || _friendRanks is { IsCompleted: false } || _enrich is { IsCompleted: false }) return;
+        if ((puuids.Count == 0 && withoutCard.Count == 0) || _friendRanks is { IsCompleted: false } || _enrich is { IsCompleted: false }) return;
         var ct = _cts.Token;
         _friendRanks = Task.Run(async () =>
         {
@@ -684,6 +745,16 @@ public sealed class GameWatcher : IDisposable
                     await Task.Delay(300, ct);
                 }
                 Wake();
+                foreach (var p in withoutCard.Take(40))
+                {
+                    lock (_avatarTried) _avatarTried.Add(p);
+                    var history = await _riot.PdGetAsync($"/match-history/v1/history/{p}?startIndex=0&endIndex=1", ct);
+                    var matchId = history?["History"]?[0]?["MatchID"]?.GetValue<string>();
+                    if (matchId != null) await _stats.GetMatchDetailsAsync(matchId, ct);
+                    _friendCards.Save();
+                    Wake();
+                    await Task.Delay(1500, ct);
+                }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

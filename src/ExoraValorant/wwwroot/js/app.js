@@ -19,6 +19,7 @@ const PAGES = [
   { id: "rpc", icon: "discord", render: renderRpc },
   { id: "settings", icon: "settings", render: renderSettings, bottom: true },
   { id: "history", render: renderHistory, hidden: true },
+  { id: "profile", render: renderProfile, hidden: true },
 ];
 
 let STATE = host ? { connection: "connecting" } : MOCK.state;
@@ -35,7 +36,8 @@ function navLabel(id) {
 function renderNav() {
   const inMatch = STATE.match ? `<span class="nav-badge">${STATE.match.state === "PREGAME" ? "•" : "LIVE"}</span>` : "";
   // A finished match is opened from Home, so Home stays highlighted.
-  const current = UI.page === "history" ? "home" : UI.page;
+  const current = UI.page === "profile" ? "friends"
+    : UI.page === "history" ? (UI.historyFrom === "profile" ? "friends" : "home") : UI.page;
   const item = (p) => `<button class="nav-item${current === p.id ? " on" : ""}" data-page="${p.id}">${icon(p.icon)}<span>${navLabel(p.id)}</span>${p.id === "match" ? inMatch : ""}</button>`;
   const nav = document.getElementById("nav");
   const next = nav.cloneNode(false);
@@ -110,7 +112,16 @@ function renderPage(animate = true) {
     const el = $content.querySelector(`[data-player="${CSS.escape(id)}"]`);
     if (el) el.classList.add("open");
   });
-  document.getElementById("titlebar-title").textContent = page.id === "home" ? "" : page.id === "history" ? t("history.title") : navLabel(page.id);
+  if (page.id === "history" && UI.history) {
+    const prefix = UI.history.id + ":";
+    UI.openPlayers.forEach((key) => {
+      if (!key.startsWith(prefix)) return;
+      const el = $content.querySelector(`[data-hist="${CSS.escape(key.slice(prefix.length))}"]`);
+      if (el) el.classList.add("open");
+    });
+  }
+  document.getElementById("titlebar-title").textContent = page.id === "home" ? "" : page.id === "history" ? t("history.title")
+    : page.id === "profile" ? t("profile.title") : navLabel(page.id);
   layoutSegs($content);
   fitNames($content);
 }
@@ -122,17 +133,28 @@ function renderAll(animate) {
 }
 
 function go(page) {
-  if (UI.page === page && page !== "history") return;
+  if (UI.page === page && page !== "history" && page !== "profile") return;
   UI.page = page;
   renderNav();
   renderPage(true);
   $content.scrollTop = 0;
 }
 
+function openProfile(puuid) {
+  UI.profile = { puuid, loading: true };
+  go("profile");
+  if (host) send("openProfile", { puuid });
+  else setTimeout(() => { UI.profile = { puuid, data: MOCK.profile(puuid) }; renderPage(true); }, 300);
+}
+
+// From a friend's profile the match is shown from the friend's side.
 function openMatch(id) {
+  const from = UI.page === "profile" ? "profile" : "home";
+  const puuid = from === "profile" && UI.profile ? UI.profile.puuid : null;
+  UI.historyFrom = from;
   UI.history = { id, loading: true };
   go("history");
-  if (host) send("openMatch", { id });
+  if (host) send("openMatch", { id, puuid });
   else setTimeout(() => { UI.history = { id, data: MOCK.history(id) }; renderPage(true); }, 300);
 }
 
@@ -210,6 +232,17 @@ document.addEventListener("click", (e) => {
 
   const recent = e.target.closest("[data-match]");
   if (recent) return openMatch(recent.dataset.match);
+
+  const hist = e.target.closest("[data-hist]");
+  if (hist) {
+    hist.classList.toggle("open");
+    const key = (UI.history && UI.history.id) + ":" + hist.dataset.hist;
+    if (hist.classList.contains("open")) UI.openPlayers.add(key); else UI.openPlayers.delete(key);
+    return;
+  }
+
+  const friend = e.target.closest("[data-friend]");
+  if (friend) return openProfile(friend.dataset.friend);
 
   const player = e.target.closest("[data-player]");
   if (player) {
@@ -369,6 +402,12 @@ if (host) {
         if (UI.history && UI.history.id === msg.id) {
           UI.history = { id: msg.id, data: msg.data };
           if (UI.page === "history") renderPage(true);
+        }
+        break;
+      case "profile":
+        if (UI.profile && UI.profile.puuid === msg.puuid) {
+          UI.profile = { puuid: msg.puuid, data: msg.data };
+          if (UI.page === "profile") renderPage(true);
         }
         break;
       case "toast":

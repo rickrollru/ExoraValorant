@@ -195,7 +195,10 @@ public sealed class MainForm : Form
                 OpenUrl(msg["url"]?.GetValue<string>());
                 break;
             case "openMatch":
-                _ = OpenMatchAsync(msg["id"]?.GetValue<string>());
+                _ = OpenMatchAsync(msg["id"]?.GetValue<string>(), msg["puuid"]?.GetValue<string>());
+                break;
+            case "openProfile":
+                _ = OpenProfileAsync(msg["puuid"]?.GetValue<string>());
                 break;
             case "playerStats":
                 _watcher.RequestPlayerStats(msg["puuid"]?.GetValue<string>() ?? "");
@@ -297,13 +300,29 @@ public sealed class MainForm : Form
         });
     }
 
-    private async Task OpenMatchAsync(string? id)
+    private async Task OpenProfileAsync(string? puuid)
+    {
+        if (string.IsNullOrEmpty(puuid)) return;
+        MeDto? profile = null;
+        try
+        {
+            profile = await _watcher.GetPlayerProfileAsync(puuid);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.Warn("Failed to load profile: " + ex.Message);
+        }
+        if (IsDisposed) return;
+        _web.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "profile", puuid, data = profile }, AppInfo.Json));
+    }
+
+    private async Task OpenMatchAsync(string? id, string? perspective)
     {
         if (string.IsNullOrEmpty(id)) return;
         HistoryMatchDto? match = null;
         try
         {
-            match = await _watcher.GetHistoryMatchAsync(id);
+            match = await _watcher.GetHistoryMatchAsync(id, perspective);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

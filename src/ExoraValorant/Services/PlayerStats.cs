@@ -137,8 +137,21 @@ public sealed class PlayerStats(RiotClient riot, GameContent content)
 
     // A full match is 1-3 MB of JSON. It is never cached: callers keep only the few numbers they need,
     // otherwise memory grows by tens of megabytes with every match played.
-    public Task<JsonNode?> GetMatchDetailsAsync(string matchId, CancellationToken ct) =>
-        riot.PdGetAsync($"/match-details/v1/matches/{matchId}", ct);
+    public async Task<JsonNode?> GetMatchDetailsAsync(string matchId, CancellationToken ct)
+    {
+        var details = await riot.PdGetAsync($"/match-details/v1/matches/{matchId}", ct);
+        if (details != null && CardSeen != null)
+            foreach (var p in details["players"]?.AsArray() ?? [])
+            {
+                var subject = p?["subject"]?.GetValue<string>();
+                var card = p?["playerCard"]?.GetValue<string>();
+                if (!string.IsNullOrEmpty(subject) && !string.IsNullOrEmpty(card)) CardSeen(subject, card);
+            }
+        return details;
+    }
+
+    // Called for every player of every downloaded match, so friends' cards can be remembered as avatars.
+    public Action<string, string>? CardSeen { get; set; }
 
     private static CombatStats ComputeCombat(JsonNode match, string puuid)
     {
