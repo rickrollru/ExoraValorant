@@ -216,7 +216,7 @@ public sealed class MainForm : Form
         switch (action)
         {
             case "drag":
-                if (WindowState == FormWindowState.Maximized) return;
+                if (WindowState == FormWindowState.Maximized) RestoreUnderCursor();
                 Native.StartWindowAction(Handle, Native.HTCAPTION);
                 break;
             case "resize":
@@ -227,14 +227,32 @@ public sealed class MainForm : Form
                 WindowState = FormWindowState.Minimized;
                 break;
             case "max":
-                // Keep the taskbar visible when a borderless window is maximised.
-                MaximizedBounds = Screen.FromHandle(Handle).WorkingArea;
                 WindowState = WindowState == FormWindowState.Maximized ? FormWindowState.Normal : FormWindowState.Maximized;
                 break;
             case "close":
                 Close();
                 break;
         }
+    }
+
+    // Dragging a maximised window restores it and keeps the cursor at the same relative spot of the title bar.
+    private void RestoreUnderCursor()
+    {
+        var cursor = Cursor.Position;
+        var ratio = (cursor.X - Left) / (double)Math.Max(Width, 1);
+        var offsetY = cursor.Y - Top;
+        WindowState = FormWindowState.Normal;
+        var work = Screen.FromPoint(cursor).WorkingArea;
+        var x = cursor.X - (int)(Width * ratio);
+        var y = Math.Max(work.Top, cursor.Y - offsetY);
+        Location = new Point(x, y);
+    }
+
+    // A borderless window would cover the taskbar when maximised; fit it to the work area of its monitor.
+    protected override void WndProc(ref Message m)
+    {
+        base.WndProc(ref m);
+        if (m.Msg == Native.WM_GETMINMAXINFO) Native.FitMaximizedToWorkArea(Handle, m.LParam);
     }
 
     // ---------- State to the page ----------

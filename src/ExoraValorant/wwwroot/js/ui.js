@@ -15,9 +15,81 @@ function initials(name) {
   return esc(s.slice(0, 2).toUpperCase());
 }
 
+// URLs that failed once are not requested again, so periodic updates don't retry them.
+const FAILED_IMAGES = new Set();
+
+function imgFailed(el) {
+  FAILED_IMAGES.add(el.getAttribute("src"));
+  el.remove();
+}
+
 // Image with a placeholder underneath; a failed image removes itself so the placeholder shows.
+// Loaded images fade in instead of popping.
 function img(url, cls, placeholder) {
-  return `<div class="img ${cls || ""}"><span class="ph">${placeholder ?? ""}</span>${url ? `<img src="${esc(url)}" loading="lazy" alt="" onerror="this.remove()">` : ""}</div>`;
+  const ok = url && !FAILED_IMAGES.has(url);
+  return `<div class="img ${cls || ""}"><span class="ph">${placeholder ?? ""}</span>${ok ? `<img src="${esc(url)}" alt="" onload="this.classList.add('ready')" onerror="imgFailed(this)">` : ""}</div>`;
+}
+
+// Patches `from` in place to match `to`, keeping nodes that did not change. Periodic state updates use this
+// instead of innerHTML so images are not reloaded and hover, focus and running transitions survive.
+const KEY_ATTRS = ["data-player", "data-page", "data-select", "data-seg", "data-key"];
+const KEEP_CLASSES = ["open", "ready"];
+
+function morph(from, to) {
+  morphAttrs(from, to);
+  if (from.tagName === "INPUT" || from.tagName === "TEXTAREA") {
+    morphInput(from, to);
+    return;
+  }
+  const a = Array.from(from.childNodes);
+  const b = Array.from(to.childNodes);
+  b.forEach((y, i) => {
+    const x = a[i];
+    if (!x) return from.appendChild(y);
+    if (x.nodeType !== y.nodeType || x.nodeName !== y.nodeName || KEY_ATTRS.some((k) => x.nodeType === 1 && x.getAttribute(k) !== y.getAttribute(k))) {
+      return from.replaceChild(y, x);
+    }
+    if (x.nodeType === 3 || x.nodeType === 8) {
+      if (x.nodeValue !== y.nodeValue) x.nodeValue = y.nodeValue;
+    } else if (x.nodeType === 1) {
+      morph(x, y);
+    }
+  });
+  for (let i = b.length; i < a.length; i++) a[i].remove();
+}
+
+// Sets an element's content through morph() so unchanged children stay untouched.
+function patchHtml(el, html) {
+  const next = el.cloneNode(false);
+  next.innerHTML = html;
+  morph(el, next);
+}
+
+function morphAttrs(from, to) {
+  for (const { name, value } of Array.from(to.attributes)) {
+    if (name === "class") {
+      const keep = KEEP_CLASSES.filter((c) => from.classList.contains(c) && !to.classList.contains(c));
+      const next = keep.length ? value + " " + keep.join(" ") : value;
+      if (from.getAttribute("class") !== next) from.setAttribute("class", next);
+    } else if (from.getAttribute(name) !== value) {
+      from.setAttribute(name, value);
+    }
+  }
+  for (const { name } of Array.from(from.attributes)) {
+    if (to.hasAttribute(name)) continue;
+    // Sliding pills are positioned from JS, not from the markup.
+    if (from.classList.contains("seg-pill") || from.classList.contains("nav-pill")) continue;
+    from.removeAttribute(name);
+  }
+}
+
+function morphInput(from, to) {
+  if (from.type === "checkbox") {
+    from.checked = to.hasAttribute("checked");
+  } else if (from !== document.activeElement) {
+    const v = to.getAttribute("value") ?? "";
+    if (from.value !== v) from.value = v;
+  }
 }
 
 function rankImg(rank, cls) {
@@ -63,9 +135,20 @@ function layoutSegs(root) {
     const on = s.querySelector("button.on");
     const pill = s.querySelector(".seg-pill");
     if (!on || !pill) { if (pill) pill.style.width = "0"; return; }
-    pill.style.left = on.offsetLeft + "px";
-    pill.style.width = on.offsetWidth + "px";
+    placePill(pill, { left: on.offsetLeft + "px", width: on.offsetWidth + "px" });
   });
+}
+
+// Moves a sliding pill; the very first placement happens without a transition so it doesn't fly in from 0.
+function placePill(pill, props) {
+  const first = !pill.dataset.placed;
+  if (first) pill.style.transition = "none";
+  Object.assign(pill.style, props);
+  if (first) {
+    pill.dataset.placed = "1";
+    pill.offsetWidth;
+    pill.style.transition = "";
+  }
 }
 
 function toast(title, text, kind) {
@@ -126,9 +209,21 @@ function mix(rgbA, rgbB, k) {
   return rgbA.map((v, i) => Math.round(v + (rgbB[i] - v) * k));
 }
 
+let themeKey = null;
+let themeTimer = 0;
+
 function applyTheme(s) {
   const root = document.documentElement;
   const light = s.theme === "light";
+
+  // Cross-fade colours when the theme or accent changes (not on first paint, not while dragging the tint slider).
+  const key = `${s.theme}|${s.accent}`;
+  if (themeKey !== null && key !== themeKey && s.anim !== "off") {
+    root.classList.add("theming");
+    clearTimeout(themeTimer);
+    themeTimer = setTimeout(() => root.classList.remove("theming"), 450);
+  }
+  themeKey = key;
   root.dataset.theme = light ? "light" : "dark";
 
   const accent = s.accent === "mono" ? (light ? "#15171C" : "#F2F3F5") : s.accent;

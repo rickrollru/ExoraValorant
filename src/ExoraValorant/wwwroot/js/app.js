@@ -34,8 +34,21 @@ function navLabel(id) {
 function renderNav() {
   const inMatch = STATE.match ? `<span class="nav-badge">${STATE.match.state === "PREGAME" ? "•" : "LIVE"}</span>` : "";
   const item = (p) => `<button class="nav-item${UI.page === p.id ? " on" : ""}" data-page="${p.id}">${icon(p.icon)}<span>${navLabel(p.id)}</span>${p.id === "match" ? inMatch : ""}</button>`;
-  document.getElementById("nav").innerHTML =
+  const nav = document.getElementById("nav");
+  const next = nav.cloneNode(false);
+  next.innerHTML = `<span class="nav-pill"></span>` +
     PAGES.filter((p) => !p.bottom).map(item).join("") + `<div class="nav-sep"></div>` + PAGES.filter((p) => p.bottom).map(item).join("");
+  morph(nav, next);
+  layoutNav();
+}
+
+// The highlight behind the active menu item is one element that slides between items.
+function layoutNav() {
+  const nav = document.getElementById("nav");
+  const on = nav.querySelector(".nav-item.on");
+  const pill = nav.querySelector(".nav-pill");
+  if (!on || !pill) return;
+  placePill(pill, { top: on.offsetTop + "px", height: on.offsetHeight + "px" });
 }
 
 function renderSidebarFoot() {
@@ -43,18 +56,18 @@ function renderSidebarFoot() {
   const me = STATE.me;
   const live = !!(st && st.state);
   let stateText = STATE.connection === "connecting" ? t("state.connecting") : stateLabel(st);
-  document.getElementById("me-card").innerHTML = `
+  patchHtml(document.getElementById("me-card"), `
     ${rankImg(me && me.rank)}
     <div class="meta">
       <div class="state"><span class="dot${live ? " live" : ""}"></span>${esc(stateText)}</div>
       <div class="name">${me ? `${esc(me.name)}<span class="tag">#${esc(me.tag)}</span>` : "—"}</div>
-    </div>`;
+    </div>`);
 
   const btn = document.getElementById("btn-launch");
   const running = STATE.valorantRunning;
   btn.className = "btn btn-launch" + (running ? "" : " primary");
   btn.disabled = running || UI.launching;
-  btn.innerHTML = running ? `${icon("check")}${t("launch.open")}` : `${icon("play")}${UI.launching ? t("launch.starting") : t("launch.start")}`;
+  patchHtml(btn, running ? `${icon("check")}${t("launch.open")}` : `${icon("play")}${UI.launching ? t("launch.starting") : t("launch.start")}`);
 }
 
 function renderBackdrop() {
@@ -68,20 +81,44 @@ function renderBackdrop() {
   }
 }
 
+const STAGGER = ".card, .player, .friend, .news-item, .recent-row, .stat";
+let enterUntil = 0;
+let deferredRender = 0;
+
+// animate = true: new page slides in and its items appear one after another.
+// animate = false: the current page is patched in place (state updates, setting changes).
 function renderPage(animate = true) {
   const page = PAGES.find((p) => p.id === UI.page) || PAGES[0];
-  const scroll = $content.scrollTop;
-  $content.innerHTML = page.render(STATE, SETTINGS, page.id === "home" ? NEWS : UI);
-  if (!animate) {
-    $content.querySelectorAll(".page").forEach((el) => (el.style.animation = "none"));
-    $content.scrollTop = scroll;
+  const html = page.render(STATE, SETTINGS, page.id === "home" ? NEWS : UI);
+
+  if (animate) {
+    $content.innerHTML = html;
+    const root = $content.firstElementChild;
+    if (root) {
+      root.classList.add("enter");
+      root.querySelectorAll(STAGGER).forEach((el, i) => {
+        el.classList.add("stagger");
+        el.style.setProperty("--i", Math.min(i, 14));
+      });
+    }
+    enterUntil = performance.now() + 600;
+  } else if (performance.now() < enterUntil) {
+    // Don't cut the entrance animation short; apply the update right after it.
+    clearTimeout(deferredRender);
+    deferredRender = setTimeout(() => renderPage(false), enterUntil - performance.now());
+    return;
+  } else {
+    const next = $content.cloneNode(false);
+    next.innerHTML = html;
+    morph($content, next);
   }
+
   UI.openPlayers.forEach((id) => {
     const el = $content.querySelector(`[data-player="${CSS.escape(id)}"]`);
     if (el) el.classList.add("open");
   });
   document.getElementById("titlebar-title").textContent = page.id === "home" ? "" : navLabel(page.id);
-  requestAnimationFrame(() => layoutSegs($content));
+  layoutSegs($content);
 }
 
 function renderAll(animate) {
@@ -149,8 +186,7 @@ document.addEventListener("click", (e) => {
     if (typeof cur === "number") v = Number(v);
     segEl.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b === segBtn));
     layoutSegs(segEl.parentElement);
-    // Let the pill finish moving before the page re-renders.
-    setTimeout(() => updateSetting(segEl.dataset.seg, v), 140 * (Number(getComputedStyle(document.documentElement).getPropertyValue("--anim")) || 1));
+    updateSetting(segEl.dataset.seg, v);
     return;
   }
 
@@ -221,7 +257,7 @@ document.addEventListener("input", (e) => {
     UI.friendQuery = el.value;
     const list = document.createElement("div");
     list.innerHTML = renderFriends(STATE, SETTINGS, UI);
-    document.getElementById("friend-list").replaceWith(list.querySelector("#friend-list"));
+    morph(document.getElementById("friend-list"), list.querySelector("#friend-list"));
   }
   if (el.matches("[data-text]") && UI.page === "rpc") {
     setPath(SETTINGS, el.dataset.text, el.value);
@@ -240,17 +276,33 @@ document.addEventListener("dblclick", (e) => {
 });
 
 // Window dragging and resizing on a frameless window are handled by the host.
+// Dragging starts only once the mouse actually moves: the host's move loop captures the mouse,
+// so starting it on mousedown would swallow the second click of a double-click.
 document.addEventListener("mousedown", (e) => {
   if (e.button !== 0) return;
   const r = e.target.closest("[data-resize]");
   if (r) { e.preventDefault(); return send("win", { action: "resize", dir: r.dataset.resize }); }
-  if (e.target.closest(".drag") && !e.target.closest("button, input, select, a")) {
-    if (e.detail === 2) send("win", { action: "max" });
-    else send("win", { action: "drag" });
-  }
+  if (!e.target.closest(".drag") || e.target.closest("button, input, select, a")) return;
+
+  if (e.detail === 2) return send("win", { action: "max" });
+  const x = e.screenX, y = e.screenY;
+  const move = (ev) => {
+    if (Math.abs(ev.screenX - x) + Math.abs(ev.screenY - y) < 4) return;
+    stop();
+    send("win", { action: "drag" });
+  };
+  const stop = () => {
+    window.removeEventListener("mousemove", move);
+    window.removeEventListener("mouseup", stop);
+  };
+  window.addEventListener("mousemove", move);
+  window.addEventListener("mouseup", stop);
 });
 
-window.addEventListener("resize", () => layoutSegs($content));
+window.addEventListener("resize", () => {
+  layoutSegs($content);
+  layoutNav();
+});
 
 // Keep the RPC preview timer ticking.
 setInterval(() => {
@@ -279,13 +331,11 @@ function onState(next) {
   lastDiscord = connected;
 
   STATE = next;
-  const focused = document.activeElement;
-  const typing = focused && (focused.tagName === "INPUT" && focused.type !== "range" && focused.type !== "checkbox");
   renderNav();
   renderSidebarFoot();
   renderBackdrop();
-  // Avoid re-rendering under the user's cursor while they type in a field.
-  if (!typing || UI.page !== prevPage) renderPage(UI.page !== prevPage);
+  // morph() leaves the focused field alone, so updates don't disturb typing.
+  renderPage(UI.page !== prevPage);
 }
 
 if (host) {

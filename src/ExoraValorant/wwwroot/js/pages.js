@@ -146,13 +146,13 @@ function playerRow(p, parties, settings) {
       </div>
       <div class="right">${level}${rr}${rankImg(p.rank)}</div>
     </div>
-    <div class="player-extra">
-      <div class="stat"><small>${t("match.peak")}</small><b>${rankImg(p.peak)}${esc(p.peak ? p.peak.name : "—")}</b><span class="sub">${esc(p.peak && p.peak.act || "")}</span></div>
-      <div class="stat"><small>${t("match.prev")}</small><b>${rankImg(p.prev)}${esc(p.prev ? p.prev.name : "—")}</b></div>
+    <div class="player-extra"><div class="player-extra-in">
+      <div class="stat"><small>${t("match.peak")}</small><b>${rankImg(p.peak)}<span title="${esc(p.peak ? p.peak.name : "")}">${esc(p.peak ? p.peak.name : "—")}</span></b><span class="sub">${esc(p.peak && p.peak.act || "")}</span></div>
+      <div class="stat"><small>${t("match.prev")}</small><b>${rankImg(p.prev)}<span title="${esc(p.prev ? p.prev.name : "")}">${esc(p.prev ? p.prev.name : "—")}</span></b></div>
       <div class="stat"><small>${t("match.wr")}</small><b class="num">${pct(p.wr)}</b><span class="sub">${t("home.games", { n: p.games ?? 0 })}</span></div>
       <div class="stat"><small>${t("match.kd")}</small><b class="num">${p.kd ?? "—"}</b></div>
       <div class="stat"><small>${t("match.hs")}</small><b class="num">${pct(p.hs)}</b></div>
-    </div>
+    </div></div>
   </div>`;
 }
 

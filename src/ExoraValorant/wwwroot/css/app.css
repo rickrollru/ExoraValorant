@@ -94,17 +94,18 @@ svg { flex-shrink: 0; }
 .logo-accent { stroke: var(--accent); filter: drop-shadow(0 0 4px var(--accent-glow)) drop-shadow(0 0 10px var(--accent-glow)); }
 .brand-name { font-family: var(--font-display); font-weight: 800; font-size: 19px; letter-spacing: .02em; }
 
-.nav { display: flex; flex-direction: column; gap: 4px; }
-.nav-item { position: relative; display: flex; align-items: center; gap: 12px; height: 42px; padding: 0 14px; border: 0; border-radius: 10px;
+.nav { position: relative; display: flex; flex-direction: column; gap: 4px; }
+.nav-pill { position: absolute; left: 0; right: 0; top: 0; height: 42px; border-radius: 10px; background: var(--card); box-shadow: inset 0 0 0 1px var(--border);
+  pointer-events: none; transition: top calc(260ms * var(--anim)) var(--ease), height calc(260ms * var(--anim)) var(--ease); }
+.nav-pill::before { content: ""; position: absolute; left: 0; top: 11px; bottom: 11px; width: 3px; border-radius: 0 3px 3px 0;
+  background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+.nav-item { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; height: 42px; padding: 0 14px; border: 0; border-radius: 10px;
   background: transparent; color: var(--text-2); font-weight: 600; font-size: 14px; cursor: pointer; text-align: left;
   transition: background var(--t-hover) var(--ease), color var(--t-hover) var(--ease); }
 .nav-item svg { width: 18px; height: 18px; color: var(--text-muted); transition: color var(--t-hover); }
 .nav-item:hover { background: var(--track); color: var(--text); }
-.nav-item.on { background: var(--card); color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
+.nav-item.on, .nav-item.on:hover { background: transparent; color: var(--text); }
 .nav-item.on svg { color: var(--accent); }
-.nav-item::before { content: ""; position: absolute; left: 0; top: 11px; bottom: 11px; width: 3px; border-radius: 0 3px 3px 0;
-  background: var(--accent); transform: scaleY(0); transition: transform var(--t-ctrl) var(--ease); }
-.nav-item.on::before { transform: scaleY(1); }
 .nav-sep { height: 1px; background: var(--border); margin: 8px 6px; }
 .nav-badge { margin-left: auto; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
 
@@ -128,9 +129,19 @@ svg { flex-shrink: 0; }
 .win-btn:hover { background: var(--track); }
 .win-close:hover { background: #E81123; color: #fff; }
 
-.content { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 28px 28px; }
-.page { animation: page-in var(--t-tab) var(--ease) both; }
+.content { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 28px 28px; scroll-behavior: smooth; }
+
+/* Page switch: the page slides up 10px and fades in, then its blocks follow one after another. */
+.page.enter { animation: page-in var(--t-tab) var(--ease) both; }
+.page.enter .stagger { animation: item-in calc(360ms * var(--anim)) var(--ease) both; animation-delay: calc(var(--i) * 28ms * var(--anim)); }
 @keyframes page-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes item-in { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+
+/* Theme or accent change: colours cross-fade instead of switching at once. */
+:root.theming, :root.theming *, :root.theming *::before, :root.theming *::after {
+  transition: background-color .4s var(--ease), color .4s var(--ease), border-color .4s var(--ease),
+    box-shadow .4s var(--ease), fill .4s var(--ease), stroke .4s var(--ease) !important;
+}
 
 .page-head { display: flex; align-items: flex-end; gap: 16px; margin: 6px 0 18px; }
 .page-title { font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -.01em; }
@@ -251,7 +262,8 @@ svg { flex-shrink: 0; }
 
 /* Images with fallback */
 .img { position: relative; overflow: hidden; background: var(--track); }
-.img img { width: 100%; height: 100%; object-fit: cover; }
+.img img { position: relative; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity calc(280ms * var(--anim)) var(--ease); }
+.img img.ready { opacity: 1; }
 .img.contain img { object-fit: contain; }
 .img .ph { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 800; color: var(--text-muted); font-size: 12px; }
 .rank-img { width: 36px; height: 36px; flex-shrink: 0; background: none; }
@@ -287,13 +299,15 @@ svg { flex-shrink: 0; }
 .agent-chip b { font-size: 13px; }
 .hero-body { padding: 14px 16px 16px; }
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.stat { background: var(--track); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.stat { background: var(--track); border-radius: 10px; padding: 10px 12px; min-width: 0; transition: background var(--t-hover) var(--ease); }
 .stat small { display: block; font-size: 11px; color: var(--text-muted); font-weight: 600; }
 .stat b { display: block; font-size: 16px; margin-top: 3px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stat .sub { font-size: 11px; color: var(--text-muted); font-weight: 600; }
 
 .recent { display: flex; flex-direction: column; gap: 6px; }
-.recent-row { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px; background: var(--track); position: relative; overflow: hidden; }
+.recent-row { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px; background: var(--track); position: relative; overflow: hidden;
+  transition: background var(--t-hover) var(--ease), transform var(--t-ctrl) var(--ease); }
+.recent-row:hover { background: color-mix(in srgb, var(--text) 13%, transparent); transform: translateX(2px); }
 .recent-row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--draw); }
 .recent-row.W::before { background: var(--win); }
 .recent-row.L::before { background: var(--loss); }
@@ -313,7 +327,7 @@ svg { flex-shrink: 0; }
 .news { display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 140px); overflow-y: auto; margin-right: -8px; padding-right: 8px; }
 .news-item { display: block; padding: 12px 14px; border-radius: 10px; background: var(--track); cursor: pointer; border: 0; text-align: left; width: 100%;
   transition: background var(--t-hover), transform var(--t-hover) var(--ease); }
-.news-item:hover { background: color-mix(in srgb, var(--text) 13%, transparent); }
+.news-item:hover { background: color-mix(in srgb, var(--text) 13%, transparent); transform: translateY(-1px); }
 .news-item small { font-size: 11px; font-weight: 700; color: var(--text-muted); }
 .news-item b { display: block; font-size: 14px; margin: 3px 0 2px; }
 .news-item p { margin: 0; font-size: 12px; line-height: 1.45; color: var(--text-2); }
@@ -334,8 +348,8 @@ svg { flex-shrink: 0; }
 .team-title .avg { margin-left: auto; }
 .players { display: flex; flex-direction: column; gap: 8px; }
 .player { position: relative; border-radius: 12px; background: var(--track); overflow: hidden; cursor: pointer; border: 1px solid transparent;
-  transition: background var(--t-hover), border-color var(--t-hover); }
-.player:hover { background: color-mix(in srgb, var(--text) 13%, transparent); }
+  transition: background var(--t-hover) var(--ease), border-color var(--t-hover) var(--ease), transform var(--t-ctrl) var(--ease), box-shadow var(--t-ctrl) var(--ease); }
+.player:hover { background: color-mix(in srgb, var(--text) 13%, transparent); transform: translateY(-1px); box-shadow: 0 6px 18px var(--shadow); }
 .player.me { border-color: color-mix(in srgb, var(--accent) 65%, transparent); }
 .player .card-bg { position: absolute; inset: 0; opacity: .14; background: none; }
 .player .card-bg img { object-position: center 30%; filter: saturate(.8); }
@@ -352,11 +366,16 @@ svg { flex-shrink: 0; }
 .player .right { display: flex; align-items: center; gap: 10px; }
 .player .rr { font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: right; line-height: 1.25; min-width: 54px; }
 .player .rr b { display: block; color: var(--text); font-size: 12px; }
-.player-extra { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 0 12px; max-height: 0; overflow: hidden;
-  transition: max-height var(--t-tab) var(--ease), padding var(--t-tab) var(--ease); }
-.player.open .player-extra { max-height: 120px; padding: 0 12px 12px; }
+/* Expands to its real height (grid 0fr -> 1fr), so the motion has no dead time like a max-height hack. */
+.player-extra { position: relative; display: grid; grid-template-rows: 0fr; opacity: 0;
+  transition: grid-template-rows calc(280ms * var(--anim)) var(--ease), opacity calc(220ms * var(--anim)) var(--ease); }
+.player.open .player-extra { grid-template-rows: 1fr; opacity: 1; }
+.player-extra-in { min-height: 0; overflow: hidden; display: grid; grid-template-columns: 1.6fr 1.6fr 1fr .8fr .8fr; gap: 6px; padding: 0 12px;
+  transition: padding calc(280ms * var(--anim)) var(--ease); }
+.player.open .player-extra-in { padding-bottom: 12px; }
 .player-extra .stat { background: color-mix(in srgb, var(--bg) 45%, transparent); padding: 8px 10px; }
-.player-extra .stat b { font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.player-extra .stat b { font-size: 13px; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.player-extra .stat b > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .player-extra .stat .rank-img { width: 20px; height: 20px; }
 
 /* ---------- Friends ---------- */
@@ -365,9 +384,9 @@ svg { flex-shrink: 0; }
 .friends-tools .search { flex: 1; }
 .friend-group { font-size: 12px; font-weight: 700; color: var(--text-muted); margin: 16px 2px 8px; display: flex; gap: 8px; }
 .friend { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: var(--track); overflow: hidden; min-height: 62px;
-  transition: background var(--t-hover); }
+  transition: background var(--t-hover) var(--ease), transform var(--t-ctrl) var(--ease), box-shadow var(--t-ctrl) var(--ease), opacity var(--t-ctrl); }
 .friend + .friend { margin-top: 8px; }
-.friend:hover { background: color-mix(in srgb, var(--text) 13%, transparent); }
+.friend:hover { background: color-mix(in srgb, var(--text) 13%, transparent); transform: translateY(-1px); box-shadow: 0 6px 18px var(--shadow); }
 .friend .card-bg { position: absolute; inset: 0; opacity: .13; background: none; }
 .friend .card-bg img { object-position: center 30%; }
 .friend > :not(.card-bg) { position: relative; }

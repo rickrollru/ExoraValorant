@@ -60,6 +60,57 @@ internal static partial class Native
         }
     }
 
+    public const int WM_GETMINMAXINFO = 0x0024;
+    private const int MONITOR_DEFAULTTONEAREST = 2;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int X, Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left, Top, Right, Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MINMAXINFO
+    {
+        public POINT Reserved, MaxSize, MaxPosition, MinTrackSize, MaxTrackSize;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MONITORINFO
+    {
+        public int Size;
+        public RECT Monitor, Work;
+        public uint Flags;
+    }
+
+    [LibraryImport("user32.dll")]
+    private static partial IntPtr MonitorFromWindow(IntPtr hwnd, int flags);
+
+    [LibraryImport("user32.dll", EntryPoint = "GetMonitorInfoW")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
+
+    // Max position is relative to the monitor's top-left corner, not to the virtual screen.
+    public static void FitMaximizedToWorkArea(IntPtr hwnd, IntPtr minMaxInfo)
+    {
+        var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        var info = new MONITORINFO { Size = Marshal.SizeOf<MONITORINFO>() };
+        if (monitor == IntPtr.Zero || !GetMonitorInfo(monitor, ref info)) return;
+
+        var mmi = Marshal.PtrToStructure<MINMAXINFO>(minMaxInfo);
+        mmi.MaxPosition.X = info.Work.Left - info.Monitor.Left;
+        mmi.MaxPosition.Y = info.Work.Top - info.Monitor.Top;
+        mmi.MaxSize.X = info.Work.Right - info.Work.Left;
+        mmi.MaxSize.Y = info.Work.Bottom - info.Work.Top;
+        Marshal.StructureToPtr(mmi, minMaxInfo, false);
+    }
+
     public static void FocusExistingWindow(string title)
     {
         var hwnd = FindWindow(null, title);
