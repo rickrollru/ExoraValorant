@@ -12,6 +12,7 @@ public sealed class GameWatcher : IDisposable
     private static readonly TimeSpan FriendsTtl = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan ProfileTtl = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan MineGrace = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan PresenceGrace = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan MyPartyTtl = TimeSpan.FromSeconds(30);
 
     private readonly Func<AppSettings> _settings;
@@ -42,6 +43,9 @@ public sealed class GameWatcher : IDisposable
     private Presence? _lastMine;
     private DateTime _lastMineAt;
     private bool _mineMissingLogged;
+    private List<Presence> _lastPresences = [];
+    private DateTime _lastPresencesAt;
+    private readonly Dictionary<string, (Presence Presence, DateTime At)> _friendSeen = new();
     private string? _myPartyId;
     private HashSet<string> _myParty = [];
     private DateTime _myPartyAt;
@@ -114,6 +118,8 @@ public sealed class GameWatcher : IDisposable
         _friendsAt = default;
         MyPresence = null;
         _lastMine = null;
+        _lastPresences = [];
+        _friendSeen.Clear();
         _myPartyId = null;
         _myParty = [];
         _myPartyAt = default;
@@ -145,7 +151,19 @@ public sealed class GameWatcher : IDisposable
             await _content.LoadSeasonsAsync(_riot, ct);
         }
 
-        var presences = Presence.Parse(await _riot.LocalGetAsync("/chat/v4/presences", ct));
+        // A failed poll returns nothing; reuse the last good list for a while instead of showing everyone offline.
+        var presencesNode = await _riot.LocalGetAsync("/chat/v4/presences", ct);
+        List<Presence> presences;
+        if (presencesNode?["presences"] is JsonArray)
+        {
+            presences = Presence.Parse(presencesNode);
+            _lastPresences = presences;
+            _lastPresencesAt = DateTime.UtcNow;
+        }
+        else
+        {
+            presences = DateTime.UtcNow - _lastPresencesAt < PresenceGrace ? _lastPresences : [];
+        }
         var mine = presences.FirstOrDefault(p => p.Puuid == _riot.Puuid && p.IsValorant);
         if (mine != null)
         {
@@ -575,6 +593,15 @@ public sealed class GameWatcher : IDisposable
         }
 
         var byPuuid = presences.Where(p => p.IsValorant).GroupBy(p => p.Puuid).ToDictionary(g => g.Key, g => g.First());
+        // A friend missing from one poll is still shown with their last presence for a short while.
+        var now = DateTime.UtcNow;
+        foreach (var (puuid, p) in byPuuid) _friendSeen[puuid] = (p, now);
+        foreach (var (puuid, seen) in _friendSeen.ToList())
+        {
+            if (byPuuid.ContainsKey(puuid)) continue;
+            if (now - seen.At < PresenceGrace) byPuuid[puuid] = seen.Presence;
+            else _friendSeen.Remove(puuid);
+        }
         var list = new List<FriendDto>();
         var withoutRank = new List<string>();
         foreach (var f in _friendsList)

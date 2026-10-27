@@ -187,20 +187,33 @@ public sealed class RiotClient : IDisposable
 
     // ---------- Local API ----------
 
+    // Returns null when the client answers with an error or the connection drops for a moment;
+    // throws RiotNotRunningException only once the Riot client is really gone (its lockfile is removed).
     public async Task<JsonNode?> LocalGetAsync(string path, CancellationToken ct)
     {
         if (_lockfile == null) throw new RiotNotRunningException("Not connected");
-        try
+        for (var attempt = 0; ; attempt++)
         {
-            using var resp = await _local.GetAsync($"https://127.0.0.1:{_lockfile.Port}{path}", ct);
-            if (!resp.IsSuccessStatusCode) return null;
-            var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync(ct));
-            if (node is JsonObject o && o["errorCode"]?.GetValue<string>() == "RPC_ERROR") return null;
-            return node;
-        }
-        catch (HttpRequestException ex)
-        {
-            throw new RiotNotRunningException("Local API unreachable: " + ex.Message);
+            try
+            {
+                using var resp = await _local.GetAsync($"https://127.0.0.1:{_lockfile.Port}{path}", ct);
+                if (!resp.IsSuccessStatusCode) return null;
+                var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync(ct));
+                if (node is JsonObject o && o["errorCode"]?.GetValue<string>() == "RPC_ERROR") return null;
+                return node;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or IOException
+                                       || (ex is TaskCanceledException && !ct.IsCancellationRequested))
+            {
+                if (!File.Exists(LockfilePath)) throw new RiotNotRunningException("Riot client closed: " + ex.Message);
+                if (attempt == 0)
+                {
+                    await Task.Delay(300, ct);
+                    continue;
+                }
+                Log.Warn($"Local API {path} failed twice: {ex.Message}");
+                return null;
+            }
         }
     }
 
