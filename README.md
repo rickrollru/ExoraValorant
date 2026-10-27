@@ -33,7 +33,7 @@ gives it. It doesn't read game memory or change game files, and players who hide
 
 ## Features
 
-### ⚔ Match
+### Match
 When a match is found, Exora switches from Home to this page by itself.
 
 - **Both teams** in agent select and in game: agent, name#tag, title, level, rank with RR or leaderboard place.
@@ -49,7 +49,7 @@ When a match is found, Exora switches from Home to this page by itself.
   <img src="docs/screenshots/en/friends.jpg" width="49%" alt="Friends">
 </p>
 
-### 🏠 Home
+### Home
 - Profile banner with your player card, title, rank and last agent.
 - Rank, peak with act, win rate and level.
 - Last 5 matches: win / loss, agent, map, mode, K/D/A and score (placement in deathmatch).
@@ -59,7 +59,7 @@ When a match is found, Exora switches from Home to this page by itself.
 - While Valorant is closed, Home shows the last account you played on.
 - Latest Valorant patch notes.
 
-### 👥 Friends
+### Friends
 - Who is in game, in agent select or in the lobby, with mode and rank.
 - Ranks of offline friends; player cards are used as avatars.
 - **Open a friend** to see their rank, peak, win rate and last matches, and open those matches from their side.
@@ -70,7 +70,7 @@ When a match is found, Exora switches from Home to this page by itself.
   <img src="docs/screenshots/en/profile.jpg" width="49%" alt="A friend's profile">
 </p>
 
-### 🎮 Discord RPC
+### Discord RPC
 | Setting | Options |
 |---|---|
 | **In game** | large and small image: map / agent / rank / Valorant logo / player card / none |
@@ -85,7 +85,7 @@ The live preview shows exactly what Discord will show, for the game and for the 
   <img src="docs/screenshots/en/settings.jpg" width="49%" alt="Settings">
 </p>
 
-### 🎨 Look
+### Look
 - Dark and light themes, 7 accent colours plus your own, background tint.
 - Manrope / Onest / Unbounded / Segoe UI fonts, 90–125% scale.
 - Smooth animations: full, reduced or off.
