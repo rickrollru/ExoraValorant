@@ -83,7 +83,8 @@ function renderMatch(state, settings) {
   if (!m) return emptyState("crosshair", t("match.noneTitle"), t("match.noneText"));
 
   const parties = partyColors(m);
-  const showScore = m.state === "INGAME" && m.score;
+  // Free-for-all modes have no round score.
+  const showScore = m.state === "INGAME" && m.score && !m.single;
   const teams = m.single
     ? `<div class="teams single">${teamCard("ally", t("match.players"), m.allies, parties, settings)}</div>`
     : `<div class="teams">${teamCard("ally", t("match.ally"), m.allies, parties, settings)}${teamCard("enemy", t("match.enemy"), m.enemies, parties, settings)}</div>`;
@@ -116,13 +117,32 @@ function teamCard(side, title, players, parties, settings) {
   players = players || [];
   const ranked = players.filter((p) => p.rank && p.rank.tier > 2);
   const avg = ranked.length ? Math.round(ranked.reduce((a, p) => a + p.rank.tier, 0) / ranked.length) : 0;
-  const avgRank = avg ? (ranked.find((p) => p.rank.tier === avg) || {}).rank : null;
+  const avgRank = avg ? ranked.reduce((best, p) => (Math.abs(p.rank.tier - avg) < Math.abs(best.rank.tier - avg) ? p : best)).rank : null;
   return `<div class="card team ${side}">
     <div class="team-title"><span class="dot"></span>${esc(title)}
       ${avgRank ? `<span class="avg badge" title="${t("match.avg")}">${esc(avgRank.name)}</span>` : ""}
     </div>
-    <div class="players">${players.map((p) => playerRow(p, parties, settings)).join("")}</div>
+    <div class="players">${groupByParty(players, parties).map((g) => g.color
+      ? `<div class="party-group" data-key="party-${g.id}" style="--party:${g.color}">
+           <span class="party-label">${icon("link")}${t("match.partyOf", { n: g.players.length })}</span>
+           ${g.players.map((p) => playerRow(p, parties, settings)).join("")}
+         </div>`
+      : playerRow(g.players[0], parties, settings)).join("")}</div>
   </div>`;
+}
+
+// Keeps the original order but pulls party members together at the position of the first one,
+// so a party is drawn as one framed block.
+function groupByParty(players, parties) {
+  const groups = [];
+  const byParty = {};
+  players.forEach((p) => {
+    const color = p.party != null ? parties[p.party] : null;
+    if (!color) return groups.push({ players: [p] });
+    if (!byParty[p.party]) groups.push((byParty[p.party] = { id: p.party, color, players: [] }));
+    byParty[p.party].players.push(p);
+  });
+  return groups;
 }
 
 function playerRow(p, parties, settings) {
@@ -138,7 +158,7 @@ function playerRow(p, parties, settings) {
   return `<div class="player${p.isMe ? " me" : ""}" data-player="${esc(p.puuid)}">
     ${img(p.card, "card-bg", "")}
     <div class="player-main">
-      ${party ? `<span class="party" style="background:${party}" title="${t("match.party")}"></span>` : ""}
+      ${party ? `<span class="party" style="background:${party};--party:${party}" title="${t("match.party")}"></span>` : ""}
       ${img(p.agent && p.agent.icon, "avatar" + (p.locked ? " locked" : ""), initials(p.agent && p.agent.name))}
       <div class="who">
         ${nameHtml(p, settings.streamerMode)}
@@ -344,7 +364,6 @@ function renderSettings(state, settings) {
           <div class="sep"></div>
           <div class="row"><div class="label">${t("settings.lang")}</div>${seg("lang", s.lang, [["ru", "Русский"], ["en", "English"]])}</div>
           <div class="row"><div class="label">${t("settings.streamer")}<small>${t("settings.streamerDesc")}</small></div>${toggle("streamerMode", s.streamerMode)}</div>
-          <div class="row"><div class="label">${t("settings.matchBg")}<small>${t("settings.matchBgDesc")}</small></div>${toggle("mapBackground", s.mapBackground)}</div>
           <div class="row"><div class="label">${t("settings.refresh")}</div>${seg("refreshSec", s.refreshSec, [[2, t("sec", { n: 2 })], [3, t("sec", { n: 3 })], [5, t("sec", { n: 5 })]])}</div>
         </div>
         <div class="card">

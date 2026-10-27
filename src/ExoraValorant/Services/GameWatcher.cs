@@ -206,7 +206,8 @@ public sealed class GameWatcher : IDisposable
         if (mine != null && loopState != null)
         {
             var mode = isRange ? (lang == "ru" ? "Стрельбище" : "The Range") : _content.QueueName(mine.QueueId, mine.IsCustomGame);
-            var score = loopState == "INGAME" && mine.ScoreAlly != null
+            // Free-for-all matches report 0-0 in presence; there's no round score to show.
+            var score = loopState == "INGAME" && mine.ScoreAlly != null && match?.Single != true
                 ? new ScoreDto(mine.ScoreAlly ?? 0, mine.ScoreEnemy ?? 0)
                 : null;
             status = new StatusDto(loopState, mode, mine.QueueId ?? "", new PartyDto(mine.PartySize, mine.MaxPartySize), score, _stateSince, currentAgent);
@@ -371,7 +372,7 @@ public sealed class GameWatcher : IDisposable
             Map = MapByAnyId(m["MapID"]?.GetValue<string>()),
             Mode = _content.QueueName(queue, m["ProvisioningFlow"]?.GetValue<string>() == "CustomGame"),
             State = "INGAME",
-            Score = mine.ScoreAlly != null ? new ScoreDto(mine.ScoreAlly ?? 0, mine.ScoreEnemy ?? 0) : null,
+            Score = mine.ScoreAlly != null && !single ? new ScoreDto(mine.ScoreAlly ?? 0, mine.ScoreEnemy ?? 0) : null,
             Allies = dtos.Where(d => allyIds.Contains(d.Puuid)).ToList(),
             Enemies = single ? [] : dtos.Where(d => !allyIds.Contains(d.Puuid)).ToList(),
             Single = single,

@@ -2,7 +2,7 @@
 
 const DEFAULT_SETTINGS = {
   lang: "ru", theme: "dark", accent: "#4F8CFF", tint: 0, font: "Manrope", scale: 1, anim: "full",
-  streamerMode: false, mapBackground: true, refreshSec: 3,
+  streamerMode: false, refreshSec: 3,
   rpc: {
     enabled: true, clientId: "",
     game: { large: "map", small: "agent" },
@@ -71,17 +71,6 @@ function renderSidebarFoot() {
   patchHtml(btn, running ? `${icon("check")}${t("launch.open")}` : `${icon("play")}${UI.launching ? t("launch.starting") : t("launch.start")}`);
 }
 
-function renderBackdrop() {
-  const el = document.getElementById("backdrop-img");
-  const splash = SETTINGS.mapBackground && STATE.match && STATE.match.map && STATE.match.map.splash;
-  if (splash) {
-    el.style.backgroundImage = `url("${splash}")`;
-    el.classList.add("on");
-  } else {
-    el.classList.remove("on");
-  }
-}
-
 const STAGGER = ".card, .player, .friend, .news-item, .recent-row, .stat";
 let enterUntil = 0;
 let deferredRender = 0;
@@ -125,7 +114,6 @@ function renderPage(animate = true) {
 function renderAll(animate) {
   renderNav();
   renderSidebarFoot();
-  renderBackdrop();
   renderPage(animate);
 }
 
@@ -158,7 +146,6 @@ function updateSetting(path, value, rerender = true) {
   if (rerender) {
     if (path === "lang") renderAll(false);
     else renderPage(false);
-    if (path === "mapBackground") renderBackdrop();
   }
 }
 
@@ -334,7 +321,6 @@ function onState(next) {
   STATE = next;
   renderNav();
   renderSidebarFoot();
-  renderBackdrop();
   // morph() leaves the focused field alone, so updates don't disturb typing.
   renderPage(UI.page !== prevPage);
 }

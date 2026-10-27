@@ -13,7 +13,6 @@ public sealed class AppSettings
     public double Scale { get; set; } = 1;
     public string Anim { get; set; } = "full";
     public bool StreamerMode { get; set; }
-    public bool MapBackground { get; set; } = true;
     public int RefreshSec { get; set; } = 3;
     public RpcSettings Rpc { get; set; } = new();
 

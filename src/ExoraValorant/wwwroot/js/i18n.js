@@ -54,6 +54,7 @@ const I18N = {
     "match.hs": "HS%",
     "match.lb": "Топ #{n}",
     "match.party": "Пати",
+    "match.partyOf": "Пати · {n}",
 
     "friends.title": "Друзья",
     "friends.sub": "Кто сейчас в Valorant",
@@ -122,8 +123,6 @@ const I18N = {
     "settings.appDesc": "Работа трекера",
     "settings.streamer": "Режим стримера",
     "settings.streamerDesc": "Скрывать ники и теги других игроков",
-    "settings.matchBg": "Фон из карты",
-    "settings.matchBgDesc": "Размытый сплэш текущей карты на фоне",
     "settings.startMin": "Сворачивать в трей при закрытии",
     "settings.refresh": "Частота обновления",
     "settings.about": "О программе",
@@ -199,6 +198,7 @@ const I18N = {
     "match.hs": "HS%",
     "match.lb": "Top #{n}",
     "match.party": "Party",
+    "match.partyOf": "Party · {n}",
 
     "friends.title": "Friends",
     "friends.sub": "Who's playing Valorant right now",
@@ -267,8 +267,6 @@ const I18N = {
     "settings.appDesc": "Tracker behaviour",
     "settings.streamer": "Streamer mode",
     "settings.streamerDesc": "Hide other players' names and tags",
-    "settings.matchBg": "Map background",
-    "settings.matchBgDesc": "Blurred splash of the current map behind the app",
     "settings.startMin": "Minimize to tray on close",
     "settings.refresh": "Refresh rate",
     "settings.about": "About",
