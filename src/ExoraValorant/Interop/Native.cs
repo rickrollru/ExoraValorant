@@ -118,6 +118,44 @@ internal static partial class Native
         Marshal.StructureToPtr(mmi, minMaxInfo, false);
     }
 
+    private const int ProcessPowerThrottling = 4;
+    private const uint PROCESS_POWER_THROTTLING_EXECUTION_SPEED = 0x1;
+    private const uint PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION = 0x4;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PROCESS_POWER_THROTTLING_STATE
+    {
+        public uint Version, ControlMask, StateMask;
+    }
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetProcessInformation(IntPtr process, int infoClass, ref PROCESS_POWER_THROTTLING_STATE info, int size);
+
+    // Keeps a process out of the game's way: below-normal priority plus Windows "efficiency mode" (EcoQoS),
+    // which favours efficiency cores and stops the process from raising the system timer resolution.
+    public static void MakeBackground(System.Diagnostics.Process process)
+    {
+        try
+        {
+            if (process.PriorityClass != System.Diagnostics.ProcessPriorityClass.BelowNormal)
+                process.PriorityClass = System.Diagnostics.ProcessPriorityClass.BelowNormal;
+        }
+        catch
+        {
+        }
+        try
+        {
+            var mask = PROCESS_POWER_THROTTLING_EXECUTION_SPEED | PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION;
+            var state = new PROCESS_POWER_THROTTLING_STATE { Version = 1, ControlMask = mask, StateMask = mask };
+            SetProcessInformation(process.Handle, ProcessPowerThrottling, ref state, Marshal.SizeOf<PROCESS_POWER_THROTTLING_STATE>());
+        }
+        catch
+        {
+            // Not available before Windows 10 1709 / 11; priority alone still helps.
+        }
+    }
+
     public static void FocusExistingWindow(string title)
     {
         var hwnd = FindWindow(null, title);

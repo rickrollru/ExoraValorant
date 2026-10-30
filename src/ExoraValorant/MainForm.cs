@@ -87,6 +87,9 @@ public sealed class MainForm : Form
             var options = new CoreWebView2EnvironmentOptions(_settings.HardwareAcceleration ? null : "--disable-gpu --disable-gpu-compositing");
             var env = await CoreWebView2Environment.CreateAsync(null, AppInfo.WebViewDir, options);
             await _web.EnsureCoreWebView2Async(env);
+            // WebView2 runs its own processes (browser, GPU, renderer); they don't inherit our priority.
+            env.ProcessInfosChanged += (_, _) => BackgroundWebViewProcesses(env);
+            BackgroundWebViewProcesses(env);
         }
         catch (WebView2RuntimeNotFoundException)
         {
@@ -128,6 +131,29 @@ public sealed class MainForm : Form
         };
         core.WebMessageReceived += OnWebMessage;
         core.Navigate(Origin + "index.html");
+    }
+
+    private static void BackgroundWebViewProcesses(CoreWebView2Environment env)
+    {
+        try
+        {
+            foreach (var info in env.GetProcessInfos())
+            {
+                try
+                {
+                    using var p = Process.GetProcessById(info.ProcessId);
+                    Native.MakeBackground(p);
+                }
+                catch (ArgumentException)
+                {
+                    // The process already exited.
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("Could not lower WebView2 process priority: " + ex.Message);
+        }
     }
 
     private void ServeResource(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
